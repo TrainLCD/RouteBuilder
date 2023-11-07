@@ -1,0 +1,50 @@
+name: ESLint
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "app/**"
+
+jobs:
+  eslint:
+    name: Run eslint scanning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Run ESLint
+        run: npx eslint .
+          --config .eslintrc.json
+          --ext .js,.jsx,.ts,.tsx
+          --format @microsoft/eslint-formatter-sarif
+          --output-file eslint-results.sarif
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: eslint-results.sarif
+          wait-for-processing: true

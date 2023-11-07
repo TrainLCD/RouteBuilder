@@ -1,0 +1,6 @@
+ci/cd:
+  - .github/*
+  - .github/**/*
+nextjs:
+  - app/*
+  - app/**/*
