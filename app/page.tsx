@@ -70,90 +70,114 @@ export default function Home() {
     <main className="flex min-h-screen flex-col">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
-      {!firstStation && (
-        <form onSubmit={handleSearchFormSubmit}>
-          <label htmlFor="first-station-form">始発駅:</label>
-          <input type="search" id="first-station-form" name="name" />
-          <input className="mr-1 bg-black text-white" type="submit" />
-        </form>
-      )}
+      <div className="flex">
+        <div className="flex-auto">
+          {!firstStation && (
+            <form onSubmit={handleSearchFormSubmit}>
+              <label htmlFor="first-station-form">始発駅:</label>
+              <input type="search" id="first-station-form" name="name" />
+              <input className="mr-1 bg-black text-white" type="submit" />
+            </form>
+          )}
 
-      {!!addedStations.length && (
-        <>
-          <p>経由駅:</p>
-          <ul className="list-none">
-            {addedStations.map((sta) => (
-              <li key={sta.id}>
-                {sta.name}({sta.line?.nameShort})
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {!!reachableStations.length && (
-        <form onSubmit={handleReachableStationSelected}>
-          <select
-            className="w-min"
-            name="stations"
-            defaultValue={reachableStations[0]?.id ?? firstStation?.id}
-          >
-            {reachableStations.map((sta) => (
-              <option
-                disabled={
-                  firstStation?.groupId === sta.groupId ||
-                  addedStations.some((added) => added.groupId === sta.groupId)
+          {!!transferableLines.length && (
+            <form onSubmit={handleSelectLine}>
+              <select
+                className="w-min"
+                name="lines"
+                defaultValue={
+                  addedStations[addedStations.length - 1]?.line?.id ??
+                  firstStation?.id
                 }
-                key={sta.id}
-                value={sta.id}
               >
-                {!firstStation
-                  ? `${sta.name}(${sta.line?.nameShort})`
-                  : sta.name}
-              </option>
-            ))}
-          </select>
-          <input className="mr-1 bg-black text-white" type="submit" />
-        </form>
-      )}
+                <optgroup
+                  label={`${addedStations[addedStations.length - 1]?.name}駅`}
+                >
+                  {transferableLines.map((line) => (
+                    <option
+                      disabled={addedStations.some(
+                        (sta) => sta.line?.id === line.id
+                      )}
+                      key={line.id}
+                      value={line.id}
+                    >
+                      {line.nameShort}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <input className="mr-1 bg-black text-white" type="submit" />
+            </form>
+          )}
 
-      {searchResultEmpty && <p>検索結果がありませんでした</p>}
-
-      {!!transferableLines.length && (
-        <form onSubmit={handleSelectLine}>
-          <select
-            className="w-min"
-            name="lines"
-            defaultValue={
-              addedStations[addedStations.length - 1]?.line?.id ??
-              firstStation?.id
-            }
-          >
-            {transferableLines.map((line) => (
-              <option
-                disabled={addedStations.some((sta) => sta.line?.id === line.id)}
-                key={line.id}
-                value={line.id}
+          {!!reachableStations.length && (
+            <form onSubmit={handleReachableStationSelected}>
+              <select
+                className="w-min"
+                name="stations"
+                defaultValue={reachableStations[0]?.id ?? firstStation?.id}
               >
-                {line.nameShort}
-              </option>
-            ))}
-          </select>
-          <input className="mr-1 bg-black text-white" type="submit" />
-        </form>
-      )}
+                <optgroup
+                  label={
+                    firstStation
+                      ? reachableStations[0]?.line?.nameFull
+                      : "始発駅"
+                  }
+                >
+                  {reachableStations.map((sta) => (
+                    <option
+                      disabled={
+                        firstStation?.groupId === sta.groupId ||
+                        addedStations.some(
+                          (added) => added.groupId === sta.groupId
+                        )
+                      }
+                      key={sta.id}
+                      value={sta.id}
+                    >
+                      {!firstStation
+                        ? `${sta.name}(${sta.line?.nameShort})`
+                        : sta.name}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <input className="mr-1 bg-black text-white" type="submit" />
+            </form>
+          )}
 
-      {completed && (
-        <div className="flex mt-4">
-          <button className="mr-1 bg-black text-white">おわり</button>
-          <button onClick={popStation} className="mr-1 bg-black text-white">
-            １駅戻る
-          </button>
-          <button onClick={clearResult} className="bg-red-600 text-white">
-            クリア
-          </button>
+          {searchResultEmpty && <p>検索結果がありませんでした</p>}
+
+          {completed && (
+            <div className="flex">
+              <button className="mr-1 bg-black text-white">おわり</button>
+              <button onClick={popStation} className="mr-1 bg-black text-white">
+                やり直す
+              </button>
+              <button onClick={clearResult} className="bg-red-600 text-white">
+                クリア
+              </button>
+            </div>
+          )}
         </div>
-      )}
+        <div className="flex-auto">
+          {!!addedStations.length && (
+            <>
+              <p>経由駅:</p>
+              <ul className="list-none">
+                {addedStations.map((sta, idx) => (
+                  <li key={sta.id}>
+                    {sta.name}
+                    {addedStations[idx - 1]?.line?.id === sta.line?.id
+                      ? ""
+                      : `(${sta.line?.nameShort})`}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

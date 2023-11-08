@@ -5,7 +5,7 @@ import { useStationQuery } from ".";
 import { Line, Station } from "../generated/stationapi_pb";
 
 export const useMakeCustomRoute = () => {
-  const [addedStations, setAddedStations] = useState<Station.AsObject[]>([]);
+  const [addedStations, setAddedStations] = useState<Station.AsObject[][]>([]);
   const [reachableStations, setReachableStations] = useState<
     Station.AsObject[]
   >([]);
@@ -28,21 +28,49 @@ export const useMakeCustomRoute = () => {
 
   const updateSelectedStation = async (station: Station.AsObject) => {
     if (!addedStations.length && station.line?.id) {
-      setAddedStations((prev) => [...prev, station]);
+      setAddedStations((prev) => [...prev, [station]]);
       setReachableStations(await getStationsByLineId(station.line?.id));
       return;
     }
 
-    setAddedStations((prev) => [...prev, station]);
+    setAddedStations((prev) => {
+      const prevAddedStationIndex = reachableStations.findIndex((sta) => {
+        const prevLastArray = prev[prev.length - 1];
+        if (!prevLastArray) {
+          return false;
+        }
+        return sta.groupId === prevLastArray[prevLastArray.length - 1]?.groupId;
+      });
+      const currentAddedStationIndex = reachableStations.findIndex(
+        (sta) => sta.groupId === station.groupId
+      );
+      const stations =
+        prevAddedStationIndex > currentAddedStationIndex
+          ? reachableStations
+              .slice(currentAddedStationIndex, prevAddedStationIndex + 1)
+              .reverse()
+          : reachableStations.slice(
+              prevAddedStationIndex,
+              currentAddedStationIndex + 1
+            );
+      // 始発駅しか入っていない配列はもはや不要のため置き換える
+      if (prev.length === 1 && prev[0]?.length === 1) {
+        return [stations];
+      }
+      return [...prev, stations];
+    });
 
     const nextTransferableStations = (
       await getTransferableStations(station.groupId)
     )
       .filter((sta) => sta.id !== station.id)
-      .filter((sta) => !addedStations.some((added) => added.id === sta.id))
+      .filter(
+        (sta) =>
+          !addedStations.flat().some((added) => added.groupId === sta.groupId)
+      )
       .map((sta) => sta.line)
-      .filter((sta) => sta) as Line.AsObject[];
-    if (nextTransferableStations.length <= 1) {
+      .filter((line) => line) as Line.AsObject[];
+    if (!nextTransferableStations.length) {
       setTransferableLines([]);
       setReachableStations([]);
       setCompleted(true);
@@ -58,9 +86,11 @@ export const useMakeCustomRoute = () => {
   };
 
   const popStation = async () => {
-    const lastStation = addedStations[addedStations.length - 1];
-    setAddedStations((prev) => prev.slice(0, -1));
-    setReachableStations(await getTransferableStations(lastStation.id));
+    const lastStation = addedStations.flat()[addedStations.flat().length - 1];
+    if (lastStation.line) {
+      setReachableStations(await getStationsByLineId(lastStation.line.id));
+      setAddedStations((prev) => prev.slice(0, -1));
+    }
     setCompleted(false);
   };
 
@@ -72,7 +102,7 @@ export const useMakeCustomRoute = () => {
   };
 
   return {
-    addedStations,
+    addedStations: addedStations.flat(),
     reachableStations,
     updateSelectedStation,
     handleSearch,
