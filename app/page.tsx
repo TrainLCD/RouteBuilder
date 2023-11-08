@@ -144,7 +144,7 @@ export default function Home() {
                 <optgroup
                   label={
                     firstStation
-                      ? reachableStations[0]?.line?.nameFull
+                      ? reachableStations[0]?.line?.nameShort
                       : "始発駅"
                   }
                 >
@@ -178,7 +178,7 @@ export default function Home() {
           {completed && (
             <>
               <p className="font-bold mb-2">
-                {lastStation?.line?.nameFull} {lastStation?.name}
+                {lastStation?.line?.nameShort} {lastStation?.name}
                 駅には乗換駅がありません
               </p>
               <div className="flex">
