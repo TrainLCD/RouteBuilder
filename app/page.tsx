@@ -212,15 +212,14 @@ export default function Home() {
             </p>
           )}
           <div className="flex">
-            {completed && (
-              <button
-                onClick={handleUpload}
-                disabled={true} // TODO: アプリでデータを使用する機能が実装されたら外す
-                className="mr-1 bg-black text-white rounded px-2 py-1 disabled:bg-neutral-500"
-              >
-                アプリに使用する
-              </button>
-            )}
+            <button
+              onClick={handleUpload}
+              disabled={true} // TODO: アプリでデータを使用する機能が実装されたら外す
+              className="mr-1 bg-black text-white rounded px-2 py-1 disabled:bg-neutral-500"
+            >
+              アプリに使用する
+            </button>
+
             {firstStation && (
               <>
                 <button
