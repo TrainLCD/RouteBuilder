@@ -2,7 +2,8 @@
 
 import { ChangeEvent, useState } from "react";
 import pkg from "../package.json";
-import { FETCH_STATIONS_MAX_COUNT } from "./constants";
+import { FETCH_STATIONS_MAX_COUNT, STOP_CONDITION_LABELS } from "./constants";
+import { StopCondition } from "./generated/stationapi_pb";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
 const { version } = pkg;
@@ -85,11 +86,11 @@ export default function Home() {
   const handleClear = () => confirm("クリアしますか？") && clearResult();
 
   return (
-    <main className="flex min-h-screen flex-col p-4">
+    <main className="flex min-h-screen flex-col p-8">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
       <div className="flex flex-col md:flex-row">
-        <div className="flex-auto">
+        <div className="flex-1 w-full">
           {!firstStation && (
             <form className="mb-2" onSubmit={handleSearchFormSubmit}>
               <label htmlFor="search-station-input" className="block">
@@ -105,6 +106,7 @@ export default function Home() {
               <input
                 className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
                 type="submit"
+                value="検索"
               />
             </form>
           )}
@@ -140,6 +142,7 @@ export default function Home() {
               <input
                 className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
                 type="submit"
+                value="指定"
               />
             </form>
           )}
@@ -187,6 +190,7 @@ export default function Home() {
               </select>
               <input
                 className="mr-1 bg-black text-white rounded ml-1 px-4 py-1 disabled:bg-neutral-500"
+                value={firstStation ? "追加" : "指定"}
                 type="submit"
                 disabled={
                   firstStation
@@ -240,14 +244,14 @@ export default function Home() {
             )}
           </div>
         </div>
-        <div className="flex-auto">
+        <div className="flex-1 w-full mt-8 md:mt-0">
           {!!addedStations.length && (
-            <table className="table-auto border-collapse border">
+            <table className="table-fixed w-full border-collapse border">
               <thead>
                 <tr>
-                  <th className="border p-1">駅名</th>
-                  <th className="border p-1">路線名</th>
-                  <th className="border p-1">通過指定</th>
+                  <th className="border p-1 w-1/2">駅名</th>
+                  <th className="border p-1 w-1/2">路線名</th>
+                  <th className="border p-1 w-1/3 md:w-1/6">通過指定</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,7 +260,13 @@ export default function Home() {
                     <td className="border p-1">{sta.name}</td>
                     <td className="border p-1">{sta.line?.nameShort}</td>
                     <td className="border p-1">
-                      <input type="checkbox" />
+                      <select>
+                        {Object.entries(StopCondition).map(([key, val]) => (
+                          <option key={key}>
+                            {STOP_CONDITION_LABELS[Number(val)]}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                   </tr>
                 ))}
