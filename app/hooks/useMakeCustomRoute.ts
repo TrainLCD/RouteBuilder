@@ -37,7 +37,7 @@ export const useMakeCustomRoute = () => {
 
     setAddedStations((prev) => [...prev, station]);
 
-    const nextTransferableStations = getTransferableStations(station.groupId)
+    const nextTransferableStations = getTransferableStations(station.id)
       .map((sta) => findLineByStationId(sta.id))
       .filter((line) => line?.id !== station.lineId) as StubLine[];
 

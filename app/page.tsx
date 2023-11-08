@@ -49,10 +49,8 @@ export default function Home() {
     if (!stationsSelection) {
       return;
     }
-    const stationGroupId = parseInt(stationsSelection.toString());
-    const station = reachableStations.find(
-      (sta) => sta.groupId === stationGroupId
-    );
+    const stationId = parseInt(stationsSelection.toString());
+    const station = reachableStations.find((sta) => sta.id === stationId);
     if (!station) {
       return;
     }
@@ -84,18 +82,16 @@ export default function Home() {
           <select
             className="w-min"
             name="stations"
-            defaultValue={
-              reachableStations[reachableStations.length - 1].groupId
-            }
+            defaultValue={reachableStations[reachableStations.length - 1].id}
           >
             {reachableStations.map((sta) => (
               <option
                 disabled={
-                  firstStation?.id === sta.id ||
+                  firstStation?.groupId === sta.groupId ||
                   addedStations.some((added) => added.groupId === sta.groupId)
                 }
                 key={sta.id}
-                value={sta.groupId}
+                value={sta.id}
               >
                 {sta.name}
                 {!firstStation ? `(${findLineByStationId(sta.id)?.name})` : ""}
