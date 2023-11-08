@@ -1,24 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import { version } from "../package.json";
+import { FETCH_STATIONS_MAX_COUNT } from "./constants";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
 export default function Home() {
   const {
     handleSearch,
     updateFromLineId,
-    updateSelectedStation,
+    addStation,
     addedStations,
+    back,
     reachableStations,
     transferableLines,
     completed,
-    popStation,
     clearResult,
   } = useMakeCustomRoute();
   const [firstStation] = addedStations;
   const lastStation = addedStations[addedStations.length - 1];
+
   const [searchResultEmpty, setSearchResultEmpty] = useState(false);
+  const [selectedStationId, setSelectedStationId] = useState<
+    number | undefined
+  >();
+  const [selectedLineId, setSelectedLineId] = useState<number | undefined>();
+
+  const handleSelectedStationChange = (e: ChangeEvent<HTMLSelectElement>) =>
+    setSelectedStationId(parseInt(e.currentTarget.value));
+  const handleSelectedLineChange = (e: ChangeEvent<HTMLSelectElement>) =>
+    setSelectedLineId(parseInt(e.currentTarget.value));
 
   const handleSearchFormSubmit = async (
     e: React.FormEvent<HTMLFormElement>
@@ -47,6 +58,7 @@ export default function Home() {
     }
     const lineId = parseInt(linesSelection.toString());
     updateFromLineId(lineId);
+    setSelectedStationId(undefined);
   };
 
   const handleReachableStationSelected = (
@@ -64,7 +76,7 @@ export default function Home() {
     if (!station) {
       return;
     }
-    updateSelectedStation(station);
+    addStation(station);
   };
 
   const handleUpload = () => undefined;
@@ -95,10 +107,10 @@ export default function Home() {
             </form>
           )}
 
-          {!!transferableLines.length && (
+          {!!transferableLines.length && lastStation && (
             <form className="mb-2" onSubmit={handleSelectLine}>
               <label htmlFor="select-line-input" className="block">
-                路線を選択:
+                {lastStation.name}駅からの路線を選択:
               </label>
 
               <select
@@ -106,7 +118,8 @@ export default function Home() {
                 className="border border-gray-400 rounded p-1 w-64"
                 name="lines"
                 id="select-line-input"
-                defaultValue={lastStation?.line?.id ?? firstStation?.id}
+                onChange={handleSelectedLineChange}
+                value={selectedLineId}
               >
                 <optgroup label={`${lastStation?.name}駅`}>
                   {transferableLines.map((line) => (
@@ -132,14 +145,18 @@ export default function Home() {
           {!!reachableStations.length && (
             <form className="mb-2" onSubmit={handleReachableStationSelected}>
               <label htmlFor="select-station-input" className="block">
-                {firstStation ? "次の停車駅" : "路線を選択"}:
+                {firstStation
+                  ? `${lastStation.name}の次の停車駅`
+                  : "路線を選択"}
+                :
               </label>
               <select
                 autoFocus
                 className="border border-gray-400 rounded p-1 w-64"
                 name="stations"
                 id="select-station-input"
-                defaultValue={reachableStations[0]?.id ?? firstStation?.id}
+                value={selectedStationId}
+                onChange={handleSelectedStationChange}
               >
                 <optgroup
                   label={
@@ -167,29 +184,47 @@ export default function Home() {
                 </optgroup>
               </select>
               <input
-                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
+                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1 disabled:bg-neutral-500"
                 type="submit"
+                disabled={
+                  firstStation
+                    ? (addedStations.length === 1 && !selectedStationId) ||
+                      addedStations.some((sta) => sta.id === selectedStationId)
+                    : false
+                }
               />
             </form>
           )}
 
+          {
+            <p className="text-sm">
+              {reachableStations.length === FETCH_STATIONS_MAX_COUNT &&
+                `${FETCH_STATIONS_MAX_COUNT}件の検索結果が取得されました。目的の駅が表示されていない場合、検索条件を絞ってください。`}
+            </p>
+          }
+
           {searchResultEmpty && <p>検索結果がありませんでした</p>}
 
           {completed && (
-            <>
-              <p className="font-bold mb-2">
-                {lastStation?.line?.nameShort} {lastStation?.name}
-                駅には乗換駅がありません
-              </p>
-              <div className="flex">
+            <p className="font-bold mb-2">
+              {lastStation?.line?.nameShort} {lastStation?.name}
+              駅には乗換駅がありません
+            </p>
+          )}
+          <div className="flex">
+            {completed && (
+              <button
+                onClick={handleUpload}
+                disabled={true} // TODO: アプリでデータを使用する機能が実装されたら外す
+                className="mr-1 bg-black text-white rounded px-2 py-1 disabled:bg-neutral-500"
+              >
+                アプリに使用する
+              </button>
+            )}
+            {firstStation && (
+              <>
                 <button
-                  onClick={handleUpload}
-                  className="mr-1 bg-black text-white rounded px-2 py-1"
-                >
-                  アプリに使用する
-                </button>
-                <button
-                  onClick={popStation}
+                  onClick={back}
                   className="mr-1 bg-black text-white rounded px-2 py-1"
                 >
                   やり直す
@@ -200,9 +235,9 @@ export default function Home() {
                 >
                   クリア
                 </button>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
         <div className="flex-auto">
           {!!addedStations.length && (

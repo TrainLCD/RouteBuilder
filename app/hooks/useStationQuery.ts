@@ -1,3 +1,4 @@
+import { FETCH_STATIONS_MAX_COUNT } from "../constants";
 import { StationAPIClient } from "../generated/StationapiServiceClientPb";
 import {
   GetStationByGroupIdRequest,
@@ -15,7 +16,7 @@ export const useStationQuery = () => {
   const searchStation = async (query: string) => {
     const req = new GetStationsByNameRequest();
     req.setStationName(query);
-    req.setLimit(100);
+    req.setLimit(FETCH_STATIONS_MAX_COUNT);
     const res = await client.getStationsByName(req, {});
     return res.toObject().stationsList;
   };

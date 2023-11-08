@@ -1,0 +1,1 @@
+export const FETCH_STATIONS_MAX_COUNT = 100;

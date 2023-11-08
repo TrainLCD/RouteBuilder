@@ -26,7 +26,7 @@ export const useMakeCustomRoute = () => {
     return stations;
   };
 
-  const updateSelectedStation = async (station: Station.AsObject) => {
+  const addStation = async (station: Station.AsObject) => {
     if (!addedStations.length && station.line?.id) {
       setAddedStations((prev) => [...prev, [station]]);
       setReachableStations(await getStationsByLineId(station.line?.id));
@@ -85,12 +85,34 @@ export const useMakeCustomRoute = () => {
     setTransferableLines([]);
   };
 
-  const popStation = async () => {
-    const lastStation = addedStations.flat()[addedStations.flat().length - 1];
+  const back = async () => {
+    const isPrevFirstStation = addedStations.length === 1;
+    const flattenedAddedStations = addedStations.flat();
+    const lastStation =
+      flattenedAddedStations[flattenedAddedStations.length - 1];
+
     if (lastStation.line) {
       setReachableStations(await getStationsByLineId(lastStation.line.id));
-      setAddedStations((prev) => prev.slice(0, -1));
     }
+
+    if (!isPrevFirstStation) {
+      setAddedStations((prev) => prev.slice(0, -1));
+      setTransferableLines([]);
+      setCompleted(false);
+      return;
+    }
+
+    const firstStation = flattenedAddedStations[0];
+
+    if (firstStation.id === lastStation.id) {
+      setAddedStations([]);
+      setTransferableLines([]);
+      setCompleted(false);
+      return;
+    }
+
+    setAddedStations([[firstStation]]);
+    setTransferableLines([]);
     setCompleted(false);
   };
 
@@ -104,10 +126,10 @@ export const useMakeCustomRoute = () => {
   return {
     addedStations: addedStations.flat(),
     reachableStations,
-    updateSelectedStation,
+    addStation,
     handleSearch,
     updateFromLineId,
-    popStation,
+    back,
     clearResult,
     transferableLines,
     completed,
