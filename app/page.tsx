@@ -1,9 +1,11 @@
 "use client";
 
 import { ChangeEvent, useState } from "react";
-import { version } from "../package.json";
+import pkg from "../package.json";
 import { FETCH_STATIONS_MAX_COUNT } from "./constants";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
+
+const { version } = pkg;
 
 export default function Home() {
   const {
@@ -86,7 +88,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col p-4">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         <div className="flex-auto">
           {!firstStation && (
             <form className="mb-2" onSubmit={handleSearchFormSubmit}>
