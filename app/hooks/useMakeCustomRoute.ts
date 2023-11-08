@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStationQuery } from ".";
-import { Line, Station } from "../generated/stationapi_pb";
+import { Line, Station, StopCondition } from "../generated/stationapi_pb";
 
 export const useMakeCustomRoute = () => {
   const [addedStations, setAddedStations] = useState<Station.AsObject[][]>([]);
@@ -123,6 +123,19 @@ export const useMakeCustomRoute = () => {
     setCompleted(false);
   };
 
+  const updateStopCondition = (
+    station: Station.AsObject,
+    stopCondition: StopCondition
+  ) => {
+    setAddedStations((prev) =>
+      prev.map((arr) =>
+        arr.map((sta) =>
+          station.id === sta.id ? { ...sta, stopCondition } : sta
+        )
+      )
+    );
+  };
+
   return {
     addedStations: addedStations.flat(),
     reachableStations,
@@ -133,5 +146,6 @@ export const useMakeCustomRoute = () => {
     clearResult,
     transferableLines,
     completed,
+    updateStopCondition,
   };
 };

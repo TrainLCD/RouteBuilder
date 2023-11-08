@@ -3,7 +3,7 @@
 import { ChangeEvent, useState } from "react";
 import pkg from "../package.json";
 import { FETCH_STATIONS_MAX_COUNT, STOP_CONDITION_LABELS } from "./constants";
-import { StopCondition } from "./generated/stationapi_pb";
+import { Station, StopCondition } from "./generated/stationapi_pb";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
 const { version } = pkg;
@@ -19,6 +19,7 @@ export default function Home() {
     transferableLines,
     completed,
     clearResult,
+    updateStopCondition,
   } = useMakeCustomRoute();
   const [firstStation] = addedStations;
   const lastStation = addedStations[addedStations.length - 1];
@@ -85,6 +86,15 @@ export default function Home() {
   const handleUpload = () => undefined;
   const handleClear = () => confirm("クリアしますか？") && clearResult();
 
+  const handleUpdateStopCondition = (
+    e: ChangeEvent<HTMLSelectElement>,
+    station: Station.AsObject
+  ) =>
+    updateStopCondition(
+      station,
+      Object.values(StopCondition).indexOf(Number(e.currentTarget.value))
+    );
+
   return (
     <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
@@ -140,7 +150,7 @@ export default function Home() {
                 </optgroup>
               </select>
               <input
-                className="mr-1 bg-black text-white rounded ml-2 px-4 py-1"
+                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
                 type="submit"
                 value="指定"
               />
@@ -260,9 +270,17 @@ export default function Home() {
                     <td className="border p-1">{sta.name}</td>
                     <td className="border p-1">{sta.line?.nameShort}</td>
                     <td className="border p-1">
-                      <select>
+                      <select
+                        className="border border-gray-400 rounded bg-white disabled:bg-gray-200"
+                        onChange={(e) => handleUpdateStopCondition(e, sta)}
+                        value={sta.stopCondition}
+                        disabled={
+                          addedStations[0]?.id === sta.id ||
+                          addedStations[addedStations.length - 1]?.id === sta.id
+                        }
+                      >
                         {Object.entries(StopCondition).map(([key, val]) => (
-                          <option key={key}>
+                          <option value={val} key={key}>
                             {STOP_CONDITION_LABELS[Number(val)]}
                           </option>
                         ))}
