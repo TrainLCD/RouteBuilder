@@ -71,7 +71,7 @@ export default function Home() {
   const handleClear = () => confirm("クリアしますか？") && clearResult();
 
   return (
-    <main className="flex min-h-screen flex-col">
+    <main className="flex min-h-screen flex-col p-4">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
       <div className="flex">
