@@ -86,7 +86,7 @@ export default function Home() {
   const handleClear = () => confirm("クリアしますか？") && clearResult();
 
   return (
-    <main className="flex min-h-screen flex-col p-8">
+    <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
       <div className="flex flex-col md:flex-row">
@@ -251,7 +251,7 @@ export default function Home() {
                 <tr>
                   <th className="border p-1 w-1/2">駅名</th>
                   <th className="border p-1 w-1/2">路線名</th>
-                  <th className="border p-1 w-1/3 md:w-1/6">通過指定</th>
+                  <th className="border p-1 w-1/3 md:w-1/5">通過指定</th>
                 </tr>
               </thead>
               <tbody>
