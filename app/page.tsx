@@ -140,7 +140,7 @@ export default function Home() {
                 </optgroup>
               </select>
               <input
-                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
+                className="mr-1 bg-black text-white rounded ml-2 px-4 py-1"
                 type="submit"
                 value="指定"
               />
