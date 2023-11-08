@@ -1,0 +1,28 @@
+name: Jest
+
+on:
+  push:
+    branches:
+      - "**"
+
+env:
+  cache-version: v1
+  TZ: "Asia/Tokyo"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+      - uses: arduino/setup-protoc@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm install
+      - run: npm test
