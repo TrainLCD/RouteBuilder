@@ -211,7 +211,7 @@ export default function Home() {
                 <tr>
                   <th className="border p-1">駅名</th>
                   <th className="border p-1">路線名</th>
-                  <th className="border p-1">通過</th>
+                  <th className="border p-1">通過指定</th>
                 </tr>
               </thead>
               <tbody>
