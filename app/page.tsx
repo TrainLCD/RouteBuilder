@@ -42,6 +42,7 @@ export default function Home() {
   const handleReachableStationSelected = (
     e: React.FormEvent<HTMLFormElement>
   ) => {
+    e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
     const stationsSelection = formData.get("stations");
