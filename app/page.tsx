@@ -17,6 +17,7 @@ export default function Home() {
     clearResult,
   } = useMakeCustomRoute();
   const [firstStation] = addedStations;
+  const lastStation = addedStations[addedStations.length - 1];
   const [searchResultEmpty, setSearchResultEmpty] = useState(false);
 
   const handleSearchFormSubmit = async (
@@ -66,6 +67,9 @@ export default function Home() {
     updateSelectedStation(station);
   };
 
+  const handleUpload = () => undefined;
+  const handleClear = () => confirm("クリアしますか？") && clearResult();
+
   return (
     <main className="flex min-h-screen flex-col">
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
@@ -73,26 +77,38 @@ export default function Home() {
       <div className="flex">
         <div className="flex-auto">
           {!firstStation && (
-            <form onSubmit={handleSearchFormSubmit}>
-              <label htmlFor="first-station-form">始発駅:</label>
-              <input type="search" id="first-station-form" name="name" />
-              <input className="mr-1 bg-black text-white" type="submit" />
+            <form className="mb-2" onSubmit={handleSearchFormSubmit}>
+              <label htmlFor="search-station-input" className="block">
+                始発駅を検索:
+              </label>
+              <input
+                autoFocus
+                className="border border-gray-400 rounded p-1 w-64"
+                type="search"
+                id="search-station-input"
+                name="name"
+              />
+              <input
+                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
+                type="submit"
+              />
             </form>
           )}
 
           {!!transferableLines.length && (
-            <form onSubmit={handleSelectLine}>
+            <form className="mb-2" onSubmit={handleSelectLine}>
+              <label htmlFor="select-line-input" className="block">
+                路線を選択:
+              </label>
+
               <select
-                className="w-min"
+                autoFocus
+                className="border border-gray-400 rounded p-1 w-64"
                 name="lines"
-                defaultValue={
-                  addedStations[addedStations.length - 1]?.line?.id ??
-                  firstStation?.id
-                }
+                id="select-line-input"
+                defaultValue={lastStation?.line?.id ?? firstStation?.id}
               >
-                <optgroup
-                  label={`${addedStations[addedStations.length - 1]?.name}駅`}
-                >
+                <optgroup label={`${lastStation?.name}駅`}>
                   {transferableLines.map((line) => (
                     <option
                       disabled={addedStations.some(
@@ -106,15 +122,23 @@ export default function Home() {
                   ))}
                 </optgroup>
               </select>
-              <input className="mr-1 bg-black text-white" type="submit" />
+              <input
+                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
+                type="submit"
+              />
             </form>
           )}
 
           {!!reachableStations.length && (
-            <form onSubmit={handleReachableStationSelected}>
+            <form className="mb-2" onSubmit={handleReachableStationSelected}>
+              <label htmlFor="select-station-input" className="block">
+                {firstStation ? "次の停車駅" : "路線を選択"}:
+              </label>
               <select
-                className="w-min"
+                autoFocus
+                className="border border-gray-400 rounded p-1 w-64"
                 name="stations"
+                id="select-station-input"
                 defaultValue={reachableStations[0]?.id ?? firstStation?.id}
               >
                 <optgroup
@@ -142,39 +166,66 @@ export default function Home() {
                   ))}
                 </optgroup>
               </select>
-              <input className="mr-1 bg-black text-white" type="submit" />
+              <input
+                className="mr-1 bg-black text-white rounded ml-1 px-4 py-1"
+                type="submit"
+              />
             </form>
           )}
 
           {searchResultEmpty && <p>検索結果がありませんでした</p>}
 
           {completed && (
-            <div className="flex">
-              <button className="mr-1 bg-black text-white">おわり</button>
-              <button onClick={popStation} className="mr-1 bg-black text-white">
-                やり直す
-              </button>
-              <button onClick={clearResult} className="bg-red-600 text-white">
-                クリア
-              </button>
-            </div>
+            <>
+              <p className="font-bold mb-2">
+                {lastStation?.line?.nameFull} {lastStation?.name}
+                駅には乗換駅がありません
+              </p>
+              <div className="flex">
+                <button
+                  onClick={handleUpload}
+                  className="mr-1 bg-black text-white rounded px-2 py-1"
+                >
+                  アプリに使用する
+                </button>
+                <button
+                  onClick={popStation}
+                  className="mr-1 bg-black text-white rounded px-2 py-1"
+                >
+                  やり直す
+                </button>
+                <button
+                  onClick={handleClear}
+                  className="bg-red-600 text-white rounded px-2 py-1"
+                >
+                  クリア
+                </button>
+              </div>
+            </>
           )}
         </div>
         <div className="flex-auto">
           {!!addedStations.length && (
-            <>
-              <p>経由駅:</p>
-              <ul className="list-none">
-                {addedStations.map((sta, idx) => (
-                  <li key={sta.id}>
-                    {sta.name}
-                    {addedStations[idx - 1]?.line?.id === sta.line?.id
-                      ? ""
-                      : `(${sta.line?.nameShort})`}
-                  </li>
+            <table className="table-auto border-collapse border">
+              <thead>
+                <tr>
+                  <th className="border p-1">駅名</th>
+                  <th className="border p-1">路線名</th>
+                  <th className="border p-1">通過</th>
+                </tr>
+              </thead>
+              <tbody>
+                {addedStations.map((sta) => (
+                  <tr key={sta.id}>
+                    <td className="border p-1">{sta.name}</td>
+                    <td className="border p-1">{sta.line?.nameShort}</td>
+                    <td className="border p-1">
+                      <input type="checkbox" />
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </>
+              </tbody>
+            </table>
           )}
         </div>
       </div>
