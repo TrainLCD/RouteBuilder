@@ -198,15 +198,6 @@ export const STUB_DB: StubDB = {
       prefectureId: 10,
       companyId: 1,
     },
-    {
-      id: 20,
-      groupId: 19,
-      name: "青柳",
-      nameRoman: "Aoyagi",
-      lineId: 4,
-      prefectureId: 10,
-      companyId: 2,
-    },
   ],
   lines: [
     {
@@ -225,10 +216,6 @@ export const STUB_DB: StubDB = {
       id: 3,
       name: "前橋市営地下線青柳線",
     },
-    {
-      id: 4,
-      name: "帝都鉄道線",
-    },
   ],
   companies: [
     {
@@ -240,11 +227,6 @@ export const STUB_DB: StubDB = {
       id: 1,
       name: "前橋市都市鉄道公社",
       nameRoman: "Maebashi City Urban Railway Corporation",
-    },
-    {
-      id: 2,
-      name: "帝都鉄道公社",
-      nameRoman: "Metropolitan Railway Corporation",
     },
   ],
 } as const;
