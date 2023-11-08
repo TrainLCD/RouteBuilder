@@ -249,9 +249,9 @@ export default function Home() {
             <table className="table-fixed w-full border-collapse border">
               <thead>
                 <tr>
-                  <th className="border p-1 w-1/2">駅名</th>
-                  <th className="border p-1 w-1/2">路線名</th>
-                  <th className="border p-1 w-1/3 md:w-1/5">通過指定</th>
+                  <th className="border p-1 w-fit md:w-1/2">駅名</th>
+                  <th className="border p-1 w-fit md:w-1/2">路線名</th>
+                  <th className="border p-1 w-fit md:w-1/5">通過指定</th>
                 </tr>
               </thead>
               <tbody>
