@@ -1,23 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { version } from "../package.json";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
 export default function Home() {
   const {
     handleSearch,
-    findLineByStationId,
     updateFromLineId,
     updateSelectedStation,
-    addedStations: [firstStation, ...addedStations],
+    addedStations,
     reachableStations,
     transferableLines,
     completed,
     popStation,
     clearResult,
   } = useMakeCustomRoute();
+  const [firstStation] = addedStations;
+  const [searchResultEmpty, setSearchResultEmpty] = useState(false);
 
-  const handleSearchFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearchFormSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -25,7 +29,12 @@ export default function Home() {
     if (!query) {
       return;
     }
-    handleSearch(query.trim());
+    const stations = await handleSearch(query.trim());
+    if (!stations.length) {
+      setSearchResultEmpty(true);
+      return;
+    }
+    setSearchResultEmpty(false);
   };
   const handleSelectLine = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -69,20 +78,25 @@ export default function Home() {
         </form>
       )}
 
-      {firstStation && (
-        <p>
-          経由駅:{" "}
-          {[firstStation, ...addedStations]
-            .map((sta) => `${sta.name}(${findLineByStationId(sta.id)?.name})`)
-            .join(" -> ")}
-        </p>
+      {!!addedStations.length && (
+        <>
+          <p>経由駅:</p>
+          <ul className="list-none">
+            {addedStations.map((sta) => (
+              <li key={sta.id}>
+                {sta.name}({sta.line?.nameShort})
+              </li>
+            ))}
+          </ul>
+        </>
       )}
+
       {!!reachableStations.length && (
         <form onSubmit={handleReachableStationSelected}>
           <select
             className="w-min"
             name="stations"
-            defaultValue={reachableStations[reachableStations.length - 1].id}
+            defaultValue={reachableStations[0]?.id ?? firstStation?.id}
           >
             {reachableStations.map((sta) => (
               <option
@@ -93,8 +107,9 @@ export default function Home() {
                 key={sta.id}
                 value={sta.id}
               >
-                {sta.name}
-                {!firstStation ? `(${findLineByStationId(sta.id)?.name})` : ""}
+                {!firstStation
+                  ? `${sta.name}(${sta.line?.nameShort})`
+                  : sta.name}
               </option>
             ))}
           </select>
@@ -102,16 +117,25 @@ export default function Home() {
         </form>
       )}
 
+      {searchResultEmpty && <p>検索結果がありませんでした</p>}
+
       {!!transferableLines.length && (
         <form onSubmit={handleSelectLine}>
-          <select className="w-min" name="lines">
+          <select
+            className="w-min"
+            name="lines"
+            defaultValue={
+              addedStations[addedStations.length - 1]?.line?.id ??
+              firstStation?.id
+            }
+          >
             {transferableLines.map((line) => (
               <option
-                disabled={addedStations.some((sta) => sta.lineId === line.id)}
+                disabled={addedStations.some((sta) => sta.line?.id === line.id)}
                 key={line.id}
                 value={line.id}
               >
-                {line.name}
+                {line.nameShort}
               </option>
             ))}
           </select>

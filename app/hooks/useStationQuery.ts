@@ -1,23 +1,40 @@
-import { STUB_DB } from "../constants";
+import { StationAPIClient } from "../generated/StationapiServiceClientPb";
+import {
+  GetStationByGroupIdRequest,
+  GetStationByLineIdRequest,
+  GetStationsByNameRequest,
+} from "../generated/stationapi_pb";
 
 export const useStationQuery = () => {
-  const searchStation = (query: string) =>
-    STUB_DB.stations.filter((station) => station.name.includes(query));
-  const getStationsByLineId = (lineId: number) =>
-    STUB_DB.stations.filter((station) => station.lineId === lineId);
-  const getTransferableStations = (groupId: number) =>
-    STUB_DB.stations.filter((station) => station.groupId === groupId);
-  const findLineByStationId = (stationId: number) =>
-    STUB_DB.lines.find((line) =>
-      STUB_DB.stations.some(
-        (sta) => sta.id === stationId && sta.lineId === line.id
-      )
-    );
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error("process.env.NEXT_PUBLIC_API_URL is not defined");
+  }
+
+  const client = new StationAPIClient(process.env.NEXT_PUBLIC_API_URL);
+
+  const searchStation = async (query: string) => {
+    const req = new GetStationsByNameRequest();
+    req.setStationName(query);
+    req.setLimit(100);
+    const res = await client.getStationsByName(req, {});
+    return res.toObject().stationsList;
+  };
+  const getStationsByLineId = async (lineId: number) => {
+    const req = new GetStationByLineIdRequest();
+    req.setLineId(lineId);
+    const res = await client.getStationsByLineId(req, {});
+    return res.toObject().stationsList;
+  };
+  const getTransferableStations = async (groupId: number) => {
+    const req = new GetStationByGroupIdRequest();
+    req.setGroupId(groupId);
+    const res = await client.getStationsByGroupId(req, {});
+    return res.toObject().stationsList;
+  };
 
   return {
     searchStation,
     getStationsByLineId,
     getTransferableStations,
-    findLineByStationId,
   };
 };

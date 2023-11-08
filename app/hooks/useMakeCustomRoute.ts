@@ -2,65 +2,65 @@
 
 import { useState } from "react";
 import { useStationQuery } from ".";
-import { StubLine, StubStation } from "../constants/stubDB";
+import { Line, Station } from "../generated/stationapi_pb";
 
 export const useMakeCustomRoute = () => {
-  const [addedStations, setAddedStations] = useState<StubStation[]>([]);
-  const [reachableStations, setReachableStations] = useState<StubStation[]>([]);
-  const [transferableLines, setTransferableLines] = useState<StubLine[]>([]);
+  const [addedStations, setAddedStations] = useState<Station.AsObject[]>([]);
+  const [reachableStations, setReachableStations] = useState<
+    Station.AsObject[]
+  >([]);
+  const [transferableLines, setTransferableLines] = useState<Line.AsObject[]>(
+    []
+  );
   const [completed, setCompleted] = useState(false);
 
-  const {
-    searchStation,
-    findLineByStationId,
-    getTransferableStations,
-    getStationsByLineId,
-  } = useStationQuery();
+  const { searchStation, getTransferableStations, getStationsByLineId } =
+    useStationQuery();
 
-  const handleSearch = (query: string | null) => {
+  const handleSearch = async (query: string | null) => {
     if (!query) {
-      return;
+      return [];
     }
-    setReachableStations(
-      searchStation(query).filter(
-        (sta) => sta.id !== addedStations[addedStations.length - 1]?.id
-      )
-    );
+    const stations = await searchStation(query);
+    setReachableStations(stations);
+    return stations;
   };
 
-  const updateSelectedStation = (station: StubStation) => {
-    if (!addedStations.length) {
+  const updateSelectedStation = async (station: Station.AsObject) => {
+    if (!addedStations.length && station.line?.id) {
       setAddedStations((prev) => [...prev, station]);
-      setReachableStations(getStationsByLineId(station.lineId));
+      setReachableStations(await getStationsByLineId(station.line?.id));
       return;
     }
 
     setAddedStations((prev) => [...prev, station]);
 
-    const nextTransferableStations = getTransferableStations(station.id)
-      .map((sta) => findLineByStationId(sta.id))
-      .filter((line) => line?.id !== station.lineId) as StubLine[];
-
-    if (nextTransferableStations.length < 1) {
+    const nextTransferableStations = (
+      await getTransferableStations(station.groupId)
+    )
+      .filter((sta) => sta.id !== station.id)
+      .filter((sta) => !addedStations.some((added) => added.id === sta.id))
+      .map((sta) => sta.line)
+      .filter((sta) => sta) as Line.AsObject[];
+    if (nextTransferableStations.length <= 1) {
       setTransferableLines([]);
       setReachableStations([]);
       setCompleted(true);
       return;
     }
-
     setTransferableLines(nextTransferableStations);
     setReachableStations([]);
   };
 
-  const updateFromLineId = (lineId: number) => {
-    setReachableStations(getStationsByLineId(lineId));
+  const updateFromLineId = async (lineId: number) => {
+    setReachableStations(await getStationsByLineId(lineId));
     setTransferableLines([]);
   };
 
-  const popStation = () => {
+  const popStation = async () => {
     const lastStation = addedStations[addedStations.length - 1];
     setAddedStations((prev) => prev.slice(0, -1));
-    setReachableStations(getStationsByLineId(lastStation.lineId));
+    setReachableStations(await getTransferableStations(lastStation.id));
     setCompleted(false);
   };
 
@@ -77,7 +77,6 @@ export const useMakeCustomRoute = () => {
     updateSelectedStation,
     handleSearch,
     updateFromLineId,
-    findLineByStationId,
     popStation,
     clearResult,
     transferableLines,
