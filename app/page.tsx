@@ -63,7 +63,7 @@ export default function Home() {
       <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
 
       {!firstStation && (
-        <form onSubmit={handleSearchFormSubmit} method="POST">
+        <form onSubmit={handleSearchFormSubmit}>
           <label htmlFor="first-station-form">始発駅:</label>
           <input type="search" id="first-station-form" name="name" />
           <input className="mr-1 bg-black text-white" type="submit" />
@@ -79,7 +79,7 @@ export default function Home() {
         </p>
       )}
       {!!reachableStations.length && (
-        <form onSubmit={handleReachableStationSelected} method="POST">
+        <form onSubmit={handleReachableStationSelected}>
           <select
             className="w-min"
             name="stations"
@@ -106,7 +106,7 @@ export default function Home() {
       )}
 
       {!!transferableLines.length && (
-        <form onSubmit={handleSelectLine} method="POST">
+        <form onSubmit={handleSelectLine}>
           <select className="w-min" name="lines">
             {transferableLines.map((line) => (
               <option
