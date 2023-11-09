@@ -2,8 +2,13 @@
 
 import { ChangeEvent, useState } from "react";
 import pkg from "../package.json";
-import { FETCH_STATIONS_MAX_COUNT, STOP_CONDITION_LABELS } from "./constants";
+import {
+  FETCH_STATIONS_MAX_COUNT,
+  PublishErrorCode,
+  STOP_CONDITION_LABELS,
+} from "./constants";
 import { Station, StopCondition } from "./generated/stationapi_pb";
+import { useAnonymousAuth, usePublishRoute } from "./hooks";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
 const { version } = pkg;
@@ -29,6 +34,11 @@ export default function Home() {
     number | undefined
   >();
   const [selectedLineId, setSelectedLineId] = useState<number | undefined>();
+  const [uploading, setUploading] = useState(false);
+
+  const { user: anonymousUser, error: signInAnonymouslyError } =
+    useAnonymousAuth();
+  const { publish: publishRoute, isPublishable } = usePublishRoute();
 
   const handleSelectedStationChange = (e: ChangeEvent<HTMLSelectElement>) =>
     setSelectedStationId(parseInt(e.currentTarget.value));
@@ -83,7 +93,29 @@ export default function Home() {
     addStation(station);
   };
 
-  const handleUpload = () => undefined;
+  const handleUpload = async () => {
+    try {
+      const placeholderName = `${firstStation?.name}(${firstStation?.line?.nameShort}) - ${lastStation?.name}(${lastStation.line?.nameShort})`;
+      const newTypeName = prompt(
+        "保存するルート名を入力してください",
+        placeholderName
+      );
+      setUploading(true);
+      if (await isPublishable({ name: newTypeName ?? placeholderName })) {
+        await publishRoute({
+          name: newTypeName ?? placeholderName,
+          stations: addedStations,
+        });
+      }
+      setUploading(false);
+      alert("アップロードが完了しました");
+    } catch (err) {
+      setUploading(false);
+
+      const msg = (err as unknown as PublishErrorCode).toString();
+      alert(`エラーコード: ${msg}`);
+    }
+  };
   const handleClear = () => confirm("クリアしますか？") && clearResult();
 
   const handleUpdateStopCondition = (
@@ -94,6 +126,24 @@ export default function Home() {
       station,
       Object.values(StopCondition).indexOf(Number(e.currentTarget.value))
     );
+
+  if (signInAnonymouslyError) {
+    return (
+      <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
+        <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
+        <h2>自動認証エラーが発生しました</h2>
+      </main>
+    );
+  }
+
+  if (!anonymousUser) {
+    return (
+      <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
+        <h1 className="text-2xl mb-4">RouteBuilder v{version}</h1>
+        <h2>Loading...</h2>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
@@ -230,7 +280,7 @@ export default function Home() {
           <div className="flex">
             <button
               onClick={handleUpload}
-              disabled={true} // TODO: アプリでデータを使用する機能が実装されたら外す
+              disabled={addedStations.length <= 1 || uploading}
               className="mr-1 bg-black text-white rounded px-2 py-1 disabled:bg-neutral-500"
             >
               アプリに使用する

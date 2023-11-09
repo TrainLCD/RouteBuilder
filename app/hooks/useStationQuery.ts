@@ -14,23 +14,35 @@ export const useStationQuery = () => {
   const client = new StationAPIClient(process.env.NEXT_PUBLIC_API_URL);
 
   const searchStation = async (query: string) => {
-    const req = new GetStationsByNameRequest();
-    req.setStationName(query);
-    req.setLimit(FETCH_STATIONS_MAX_COUNT);
-    const res = await client.getStationsByName(req, {});
-    return res.toObject().stationsList;
+    try {
+      const req = new GetStationsByNameRequest();
+      req.setStationName(query);
+      req.setLimit(FETCH_STATIONS_MAX_COUNT);
+      const res = await client.getStationsByName(req, {});
+      return res.toObject().stationsList;
+    } catch (err) {
+      return Promise.reject(err);
+    }
   };
   const getStationsByLineId = async (lineId: number) => {
-    const req = new GetStationByLineIdRequest();
-    req.setLineId(lineId);
-    const res = await client.getStationsByLineId(req, {});
-    return res.toObject().stationsList;
+    try {
+      const req = new GetStationByLineIdRequest();
+      req.setLineId(lineId);
+      const res = await client.getStationsByLineId(req, {});
+      return res.toObject().stationsList;
+    } catch (err) {
+      return Promise.reject(err);
+    }
   };
   const getTransferableStations = async (groupId: number) => {
-    const req = new GetStationByGroupIdRequest();
-    req.setGroupId(groupId);
-    const res = await client.getStationsByGroupId(req, {});
-    return res.toObject().stationsList;
+    try {
+      const req = new GetStationByGroupIdRequest();
+      req.setGroupId(groupId);
+      const res = await client.getStationsByGroupId(req, {});
+      return res.toObject().stationsList;
+    } catch (err) {
+      return Promise.reject(err);
+    }
   };
 
   return {
