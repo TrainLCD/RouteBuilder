@@ -1,4 +1,10 @@
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import {
+  Timestamp,
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+} from "firebase/firestore";
 import { nanoid } from "nanoid";
 import { useAnonymousAuth } from ".";
 import { FIRESTORE_COLLECTION_PATH, PUBLISH_ERROR_CODE } from "../constants";
@@ -54,6 +60,7 @@ export const usePublishRoute = () => {
         userId: anonymousUser.uid,
         name,
         stations: convertToPublishableStations(stations),
+        createdAt: Timestamp.now(),
       });
       return docId;
     } catch (e) {
