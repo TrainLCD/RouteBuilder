@@ -100,8 +100,11 @@ export default function Home() {
         "保存するルート名を入力してください",
         placeholderName
       );
+      if (newTypeName) {
+        return;
+      }
       setUploading(true);
-      if (await isPublishable({ name: newTypeName ?? placeholderName })) {
+      if (await isPublishable({ name: newTypeName })) {
         await publishRoute({
           name: newTypeName ?? placeholderName,
           stations: addedStations,
