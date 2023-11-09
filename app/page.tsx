@@ -100,7 +100,7 @@ export default function Home() {
         "保存するルート名を入力してください",
         placeholderName
       );
-      if (newTypeName) {
+      if (!newTypeName) {
         return;
       }
       setUploading(true);
