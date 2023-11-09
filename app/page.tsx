@@ -318,29 +318,33 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {addedStations.map((sta) => (
-                  <tr key={sta.id}>
-                    <td className="border p-1">{sta.name}</td>
-                    <td className="border p-1">{sta.line?.nameShort}</td>
-                    <td className="border p-1">
-                      <select
-                        className="border border-gray-400 rounded bg-white disabled:bg-gray-200"
-                        onChange={(e) => handleUpdateStopCondition(e, sta)}
-                        value={sta.stopCondition}
-                        disabled={
-                          addedStations[0]?.id === sta.id ||
-                          addedStations[addedStations.length - 1]?.id === sta.id
-                        }
-                      >
-                        {Object.entries(StopCondition).map(([key, val]) => (
-                          <option value={val} key={key}>
-                            {STOP_CONDITION_LABELS[Number(val)]}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                {addedStations
+                  .slice()
+                  .reverse()
+                  .map((sta) => (
+                    <tr key={sta.id}>
+                      <td className="border p-1">{sta.name}</td>
+                      <td className="border p-1">{sta.line?.nameShort}</td>
+                      <td className="border p-1">
+                        <select
+                          className="border border-gray-400 rounded bg-white disabled:bg-gray-200"
+                          onChange={(e) => handleUpdateStopCondition(e, sta)}
+                          value={sta.stopCondition}
+                          disabled={
+                            addedStations[0]?.id === sta.id ||
+                            addedStations[addedStations.length - 1]?.id ===
+                              sta.id
+                          }
+                        >
+                          {Object.entries(StopCondition).map(([key, val]) => (
+                            <option value={val} key={key}>
+                              {STOP_CONDITION_LABELS[Number(val)]}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           )}
