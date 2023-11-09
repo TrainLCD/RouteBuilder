@@ -35,6 +35,9 @@ export default function Home() {
   >();
   const [selectedLineId, setSelectedLineId] = useState<number | undefined>();
   const [uploading, setUploading] = useState(false);
+  const [checkedAddedStations, setCheckedAddedStations] = useState<
+    Station.AsObject[]
+  >([]);
 
   const { user: anonymousUser, error: signInAnonymouslyError } =
     useAnonymousAuth();
@@ -44,6 +47,43 @@ export default function Home() {
     setSelectedStationId(parseInt(e.currentTarget.value));
   const handleSelectedLineChange = (e: ChangeEvent<HTMLSelectElement>) =>
     setSelectedLineId(parseInt(e.currentTarget.value));
+
+  const handleCheckAddedStations = (
+    e: ChangeEvent<HTMLInputElement>,
+    station: Station.AsObject
+  ) => {
+    const checked = e.currentTarget.checked;
+    if (checked) {
+      setCheckedAddedStations([...checkedAddedStations, station]);
+    } else {
+      setCheckedAddedStations(
+        checkedAddedStations.filter((sta) => sta.id !== station.id)
+      );
+    }
+  };
+
+  const handleCheckAllStations = (e: ChangeEvent<HTMLInputElement>) => {
+    const checked = e.currentTarget.checked;
+    if (checked) {
+      setCheckedAddedStations(addedStations.slice(1, -1));
+    } else {
+      setCheckedAddedStations([]);
+    }
+  };
+
+  const handleUpdateCheckedStations = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const stopCondition = formData.get("stop-condition")?.toString();
+
+    checkedAddedStations.forEach((sta) => {
+      updateStopCondition(
+        sta,
+        Object.values(StopCondition).indexOf(Number(stopCondition ?? 0))
+      );
+    });
+  };
 
   const handleSearchFormSubmit = async (
     e: React.FormEvent<HTMLFormElement>
@@ -309,44 +349,88 @@ export default function Home() {
         </div>
         <div className="flex-1 w-full mt-8 md:mt-0">
           {!!addedStations.length && (
-            <table className="table-fixed w-full border-collapse border">
-              <thead>
-                <tr>
-                  <th className="border p-1 w-fit md:w-1/2">駅名</th>
-                  <th className="border p-1 w-fit md:w-1/2">路線名</th>
-                  <th className="border p-1 w-fit md:w-1/5">通過指定</th>
-                </tr>
-              </thead>
-              <tbody>
-                {addedStations
-                  .slice()
-                  .reverse()
-                  .map((sta) => (
-                    <tr key={sta.id}>
-                      <td className="border p-1">{sta.name}</td>
-                      <td className="border p-1">{sta.line?.nameShort}</td>
-                      <td className="border p-1">
-                        <select
-                          className="border border-gray-400 rounded bg-white disabled:bg-gray-200"
-                          onChange={(e) => handleUpdateStopCondition(e, sta)}
-                          value={sta.stopCondition}
-                          disabled={
-                            addedStations[0]?.id === sta.id ||
-                            addedStations[addedStations.length - 1]?.id ===
-                              sta.id
-                          }
-                        >
-                          {Object.entries(StopCondition).map(([key, val]) => (
-                            <option value={val} key={key}>
-                              {STOP_CONDITION_LABELS[Number(val)]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
+            <>
+              <form className="mb-4" onSubmit={handleUpdateCheckedStations}>
+                <label className="font-bold">一括操作:</label>
+                <select
+                  name="stop-condition"
+                  className="border border-gray-400 rounded bg-white disabled:bg-gray-200 ml-2 py-1"
+                  disabled={addedStations.length <= 2}
+                >
+                  {Object.entries(StopCondition).map(([key, val]) => (
+                    <option value={val} key={key}>
+                      {STOP_CONDITION_LABELS[Number(val)]}
+                    </option>
                   ))}
-              </tbody>
-            </table>
+                </select>
+
+                <input
+                  className="ml-2 bg-black text-white rounded ml-1 px-4 py-1 disabled:bg-neutral-500"
+                  type="submit"
+                  value="確定"
+                  disabled={addedStations.length <= 2}
+                />
+              </form>
+
+              <table className="table-fixed w-full border-collapse border">
+                <thead>
+                  <tr>
+                    <th className="border p-1 w-fit w-6 md:w-8">
+                      <input
+                        type="checkbox"
+                        disabled={addedStations.length <= 2}
+                        checked={
+                          checkedAddedStations.length > addedStations.length - 3
+                        }
+                        onChange={handleCheckAllStations}
+                      />
+                    </th>
+                    <th className="border p-1 w-fit md:w-1/2">駅名</th>
+                    <th className="border p-1 w-fit md:w-1/2">路線名</th>
+                    <th className="border p-1 w-fit md:w-32">通過指定</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {addedStations
+                    .slice()
+                    .reverse()
+                    .map((sta, idx, arr) => (
+                      <tr key={sta.id}>
+                        <td className="border p-1 text-center">
+                          <input
+                            type="checkbox"
+                            disabled={idx === 0 || idx === arr.length - 1}
+                            checked={checkedAddedStations.some(
+                              (s) => s.id === sta.id
+                            )}
+                            onChange={(e) => handleCheckAddedStations(e, sta)}
+                          />
+                        </td>
+                        <td className="border p-1">{sta.name}</td>
+                        <td className="border p-1">{sta.line?.nameShort}</td>
+                        <td className="border p-1">
+                          <select
+                            className="border border-gray-400 rounded bg-white disabled:bg-gray-200"
+                            onChange={(e) => handleUpdateStopCondition(e, sta)}
+                            value={sta.stopCondition}
+                            disabled={
+                              addedStations[0]?.id === sta.id ||
+                              addedStations[addedStations.length - 1]?.id ===
+                                sta.id
+                            }
+                          >
+                            {Object.entries(StopCondition).map(([key, val]) => (
+                              <option value={val} key={key}>
+                                {STOP_CONDITION_LABELS[Number(val)]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       </div>
