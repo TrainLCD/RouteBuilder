@@ -1,12 +1,13 @@
 import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { nanoid } from "nanoid";
 import { useAnonymousAuth } from ".";
-import { PUBLISH_ERROR_CODE } from "../constants";
+import { FIRESTORE_COLLECTION_PATH, PUBLISH_ERROR_CODE } from "../constants";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
 
 export const usePublishRoute = () => {
   const { user: anonymousUser } = useAnonymousAuth();
+  const { UPLOADED_COMMUNITY_ROUTES } = FIRESTORE_COLLECTION_PATH;
 
   // NOTE: 完全一致する種別を弾くか検討中。レアケースだと思うが、手間をかけて入力したデータが既に存在するというのは悲しいので。
   const isPublishable = async ({ name }: { name: string | null }) => {
@@ -17,7 +18,7 @@ export const usePublishRoute = () => {
     }
 
     const docsRef = await getDocs(
-      collection(firestore, "uploadedCommunityTrainTypes")
+      collection(firestore, UPLOADED_COMMUNITY_ROUTES)
     );
 
     const sameNameAlreadyExists =
@@ -49,7 +50,7 @@ export const usePublishRoute = () => {
 
     try {
       const docId = nanoid();
-      await setDoc(doc(firestore, "uploadedCommunityTrainTypes", docId), {
+      await setDoc(doc(firestore, UPLOADED_COMMUNITY_ROUTES, docId), {
         userId: anonymousUser.uid,
         name,
         stations: convertToPublishableStations(stations),
