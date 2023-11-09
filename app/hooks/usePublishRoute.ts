@@ -7,8 +7,12 @@ import {
 } from "firebase/firestore";
 import { nanoid } from "nanoid";
 import { useAnonymousAuth } from ".";
-import { FIRESTORE_COLLECTION_PATH, PUBLISH_ERROR_CODE } from "../constants";
-import { CustomRoute, ROUTE_VISIBILITY } from "../constants/route";
+import {
+  CustomRoute,
+  FIRESTORE_COLLECTION_PATH,
+  PUBLISH_ERROR_CODE,
+  ROUTE_VISIBILITY,
+} from "../constants";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
 

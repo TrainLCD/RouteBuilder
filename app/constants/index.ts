@@ -1,4 +1,6 @@
 export { FETCH_STATIONS_MAX_COUNT } from "./api";
+export { ROUTE_VISIBILITY } from "./customRoute";
+export type { CustomRoute, RouteStation, RouteVisibility } from "./customRoute";
 export { PUBLISH_ERROR_CODE } from "./errorCode";
 export type { PublishErrorCode } from "./errorCode";
 export { FIRESTORE_COLLECTION_PATH } from "./firestore";
