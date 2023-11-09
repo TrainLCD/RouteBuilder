@@ -283,7 +283,7 @@ export default function Home() {
               disabled={addedStations.length <= 1 || uploading}
               className="mr-1 bg-black text-white rounded px-2 py-1 disabled:bg-neutral-500"
             >
-              アプリに使用する
+              アプリで使用する
             </button>
 
             {firstStation && (
