@@ -8,6 +8,7 @@ import {
 import { nanoid } from "nanoid";
 import { useAnonymousAuth } from ".";
 import { FIRESTORE_COLLECTION_PATH, PUBLISH_ERROR_CODE } from "../constants";
+import { CustomRoute, ROUTE_VISIBILITY } from "../constants/route";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
 
@@ -56,12 +57,14 @@ export const usePublishRoute = () => {
 
     try {
       const docId = nanoid();
-      await setDoc(doc(firestore, UPLOADED_COMMUNITY_ROUTES, docId), {
+      const newDoc: CustomRoute = {
         userId: anonymousUser.uid,
         name,
         stations: convertToPublishableStations(stations),
         createdAt: Timestamp.now(),
-      });
+        visibility: ROUTE_VISIBILITY.PUBLIC,
+      };
+      await setDoc(doc(firestore, UPLOADED_COMMUNITY_ROUTES, docId), newDoc);
       return docId;
     } catch (e) {
       return Promise.reject(e);
