@@ -5,6 +5,8 @@ import pkg from "../package.json";
 import {
   FETCH_STATIONS_MAX_COUNT,
   PublishErrorCode,
+  RESERVED_TRAIN_TYPE_LABELS,
+  ReservedTrainTypeId,
   STOP_CONDITION_LABELS,
 } from "./constants";
 import { Station, StopCondition } from "./generated/stationapi_pb";
@@ -44,6 +46,8 @@ export default function Home() {
   const [checkedAddedStations, setCheckedAddedStations] = useState<
     Station.AsObject[]
   >([]);
+  const [selectedTypeId, setSelectedTypeId] =
+    useState<ReservedTrainTypeId>(300);
 
   const { user: anonymousUser, error: signInAnonymouslyError } =
     useAnonymousAuth();
@@ -155,6 +159,7 @@ export default function Home() {
         await publishRoute({
           name: newTypeName ?? placeholderName,
           stations: addedStations,
+          trainTypeId: selectedTypeId,
         });
       }
       setUploading(false);
@@ -176,6 +181,9 @@ export default function Home() {
       station,
       Object.values(StopCondition).indexOf(Number(e.currentTarget.value))
     );
+
+  const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) =>
+    setSelectedTypeId(parseInt(e.currentTarget.value) as ReservedTrainTypeId);
 
   if (signInAnonymouslyError) {
     return (
@@ -220,7 +228,6 @@ export default function Home() {
               />
             </form>
           )}
-
           {!!transferableLines.length && lastStation && (
             <form className="mb-2" onSubmit={handleSelectLine}>
               <label htmlFor="select-line-input" className="block">
@@ -256,7 +263,6 @@ export default function Home() {
               />
             </form>
           )}
-
           {!!reachableLocalStations.length && (
             <form className="mb-2" onSubmit={handleReachableStationSelected}>
               <label htmlFor="select-station-input" className="block">
@@ -329,16 +335,13 @@ export default function Home() {
               />
             </form>
           )}
-
           {
             <p className="text-sm">
               {reachableLocalStations.length === FETCH_STATIONS_MAX_COUNT &&
                 `${FETCH_STATIONS_MAX_COUNT}件の検索結果が取得されました。目的の駅が表示されていない場合、検索条件を絞ってください。`}
             </p>
           }
-
           {searchResultEmpty && <p>検索結果がありませんでした</p>}
-
           {completed && (
             <p className="font-bold mb-2">
               {lastStation?.line?.nameShort} {lastStation?.name}
@@ -371,6 +374,18 @@ export default function Home() {
               </>
             )}
           </div>
+          <p className="font-bold mt-4">オプション:</p>
+
+          <select
+            className="border border-gray-400 rounded bg-white disabled:bg-gray-200 py-1"
+            onChange={handleTypeChange}
+          >
+            {Object.values(RESERVED_TRAIN_TYPE_LABELS).map((label) => (
+              <option key={label} value={selectedTypeId}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex-1 w-full mt-8 md:mt-0">
           {!!addedStations.length && (

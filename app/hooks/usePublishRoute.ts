@@ -12,6 +12,7 @@ import {
   FIRESTORE_COLLECTION_PATH,
   PUBLISH_ERROR_CODE,
   ROUTE_VISIBILITY,
+  ReservedTrainTypeId,
 } from "../constants";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
@@ -48,22 +49,22 @@ export const usePublishRoute = () => {
       stopCondition: sta.stopCondition,
     }));
 
-  const publish = async ({
-    name,
-    stations,
-  }: {
+  const publish = async (inputData: {
     name: string;
     stations: Station.AsObject[];
+    trainTypeId: ReservedTrainTypeId;
   }) => {
     if (!anonymousUser) {
       return;
     }
 
+    const { stations } = inputData;
+
     try {
       const docId = nanoid();
       const newDoc: CustomRoute = {
+        ...inputData,
         userId: anonymousUser.uid,
-        name,
         stations: convertToPublishableStations(stations),
         createdAt: Timestamp.now(),
         visibility: ROUTE_VISIBILITY.PUBLIC,
