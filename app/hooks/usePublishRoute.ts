@@ -12,7 +12,7 @@ import {
   FIRESTORE_COLLECTION_PATH,
   PUBLISH_ERROR_CODE,
   ROUTE_VISIBILITY,
-  ReservedTrainTypeId,
+  ReservedTrainType,
 } from "../constants";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
@@ -52,7 +52,7 @@ export const usePublishRoute = () => {
   const publish = async (inputData: {
     name: string;
     stations: Station.AsObject[];
-    trainTypeId: ReservedTrainTypeId;
+    trainType: ReservedTrainType;
   }) => {
     if (!anonymousUser) {
       return;

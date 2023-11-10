@@ -5,8 +5,8 @@ import pkg from "../package.json";
 import {
   FETCH_STATIONS_MAX_COUNT,
   PublishErrorCode,
-  RESERVED_TRAIN_TYPE_LABELS,
-  ReservedTrainTypeId,
+  RESERVED_TRAIN_TYPES,
+  ReservedTrainType,
   STOP_CONDITION_LABELS,
 } from "./constants";
 import { Station, StopCondition } from "./generated/stationapi_pb";
@@ -46,8 +46,9 @@ export default function Home() {
   const [checkedAddedStations, setCheckedAddedStations] = useState<
     Station.AsObject[]
   >([]);
-  const [selectedTypeId, setSelectedTypeId] =
-    useState<ReservedTrainTypeId>(300);
+  const [selectedType, setSelectedType] = useState<ReservedTrainType>(
+    RESERVED_TRAIN_TYPES.LOCAL
+  );
 
   const { user: anonymousUser, error: signInAnonymouslyError } =
     useAnonymousAuth();
@@ -159,7 +160,7 @@ export default function Home() {
         await publishRoute({
           name: newTypeName ?? placeholderName,
           stations: addedStations,
-          trainTypeId: selectedTypeId,
+          trainType: selectedType,
         });
       }
       setUploading(false);
@@ -183,7 +184,11 @@ export default function Home() {
     );
 
   const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) =>
-    setSelectedTypeId(parseInt(e.currentTarget.value) as ReservedTrainTypeId);
+    setSelectedType(
+      RESERVED_TRAIN_TYPES[
+        e.currentTarget.value as keyof typeof RESERVED_TRAIN_TYPES
+      ]
+    );
 
   if (signInAnonymouslyError) {
     return (
@@ -380,9 +385,9 @@ export default function Home() {
             className="border border-gray-400 rounded bg-white disabled:bg-gray-200 py-1"
             onChange={handleTypeChange}
           >
-            {Object.values(RESERVED_TRAIN_TYPE_LABELS).map((label) => (
-              <option key={label} value={selectedTypeId}>
-                {label}
+            {Object.entries(RESERVED_TRAIN_TYPES).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value.name}
               </option>
             ))}
           </select>

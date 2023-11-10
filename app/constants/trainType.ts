@@ -1,23 +1,76 @@
-export const RESERVED_TRAIN_TYPE_IDS = {
-  LOCAL: 300,
-  LOCAL2: 301,
-  RAPID: 302,
-  // SECTION_RAPID: 303,
-  EXPRESS: 304,
-  // UNDEFINED: 305
-  LTD_EXP: 306,
-} as const;
-export type ReservedTrainTypeId =
-  (typeof RESERVED_TRAIN_TYPE_IDS)[keyof typeof RESERVED_TRAIN_TYPE_IDS];
+import { TrainDirection, TrainTypeKind } from "../generated/stationapi_pb";
 
-export const RESERVED_TRAIN_TYPE_LABELS = {
-  LOCAL: "普通",
-  LOCAL2: "各駅停車",
-  RAPID: "快速",
-  // SECTION_RAPID: '区間急行',
-  EXPRESS: "急行",
-  // UNDEFINED: 305
-  LTD_EXP: "特急",
+export const RESERVED_TRAIN_TYPES = {
+  LOCAL: {
+    lines: [],
+    id: 1000,
+    typeId: 1000,
+    groupId: 1000,
+    name: "普通",
+    name_katakana: "フツウ",
+    color: "#1F63C6",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.DEFAULT,
+    nameRoman: "Local",
+    nameChinese: "慢车",
+    nameKorean: "보통",
+  },
+  LOCAL2: {
+    lines: [],
+    id: 1001,
+    typeId: 1001,
+    groupId: 1001,
+    name: "各駅停車",
+    name_katakana: "カクエキテイシャ",
+    color: "#1F63C6",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.DEFAULT,
+    nameRoman: "Local",
+    nameChinese: "每站停车",
+    nameKorean: "각역정차",
+  },
+  RAPID: {
+    lines: [],
+    id: 1002,
+    typeId: 1002,
+    groupId: 1002,
+    name: "快速",
+    name_katakana: "カイソク",
+    color: "#DC143C",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.RAPID,
+    nameRoman: "Rapid",
+    nameChinese: "快车",
+    nameKorean: "쾌속",
+  },
+  EXPRESS: {
+    lines: [],
+    id: 1003,
+    typeId: 1003,
+    groupId: 1003,
+    name: "急行",
+    name_katakana: "キュウコウ",
+    color: "#DC143C",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.EXPRESS,
+    nameRoman: "Express",
+    nameChinese: "特快",
+    nameKorean: "급행",
+  },
+  LTD_EXP: {
+    lines: [],
+    id: 1004,
+    typeId: 1004,
+    groupId: 1004,
+    name: "特急",
+    name_katakana: "トッキュウ",
+    color: "#DC143C",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.LIMITEDEXPRESS,
+    nameRoman: "Limited Express",
+    nameChinese: "特快",
+    nameKorean: "특급",
+  },
 } as const;
-export type ReservedTrainTypeLabel =
-  (typeof RESERVED_TRAIN_TYPE_LABELS)[keyof typeof RESERVED_TRAIN_TYPE_LABELS];
+export type ReservedTrainType =
+  (typeof RESERVED_TRAIN_TYPES)[keyof typeof RESERVED_TRAIN_TYPES];
