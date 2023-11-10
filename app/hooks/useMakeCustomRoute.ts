@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { useStationQuery } from ".";
-import { Line, Station, StopCondition } from "../generated/stationapi_pb";
+import {
+  Line,
+  Station,
+  StopCondition,
+  TrainTypeKind,
+} from "../generated/stationapi_pb";
 
 export const useMakeCustomRoute = () => {
   const [addedStations, setAddedStations] = useState<Station.AsObject[][]>([]);
-  const [reachableStations, setReachableStations] = useState<
+  const [reachableLocalStations, setReachableLocalStations] = useState<
     Station.AsObject[]
   >([]);
+  const [reachableBranchLineStations, setReachableBranchLineStations] =
+    useState<Station.AsObject[]>([]);
   const [transferableLines, setTransferableLines] = useState<Line.AsObject[]>(
     []
   );
@@ -22,34 +29,47 @@ export const useMakeCustomRoute = () => {
       return [];
     }
     const stations = await searchStation(query);
-    setReachableStations(stations);
+    setReachableLocalStations(stations);
+    setReachableBranchLineStations([]);
     return stations;
   };
 
   const addStation = async (station: Station.AsObject) => {
-    if (!addedStations.length && station.line?.id) {
+    if (!station.line) {
+      return;
+    }
+
+    const [localStations, branchLineStations] = await getStationsByLineId(
+      station.line?.id,
+      station.id
+    );
+
+    if (!addedStations.length) {
       setAddedStations((prev) => [...prev, [station]]);
-      setReachableStations(await getStationsByLineId(station.line?.id));
+      setReachableLocalStations(localStations);
+      setReachableBranchLineStations(branchLineStations);
       return;
     }
 
     setAddedStations((prev) => {
-      const prevAddedStationIndex = reachableStations.findIndex((sta) => {
+      const joinedStations = [...localStations, ...branchLineStations];
+
+      const prevAddedStationIndex = joinedStations.findIndex((sta) => {
         const prevLastArray = prev[prev.length - 1];
         if (!prevLastArray) {
           return false;
         }
         return sta.groupId === prevLastArray[prevLastArray.length - 1]?.groupId;
       });
-      const currentAddedStationIndex = reachableStations.findIndex(
+      const currentAddedStationIndex = joinedStations.findIndex(
         (sta) => sta.groupId === station.groupId
       );
       const stations =
         prevAddedStationIndex > currentAddedStationIndex
-          ? reachableStations
+          ? joinedStations
               .slice(currentAddedStationIndex, prevAddedStationIndex + 1)
               .reverse()
-          : reachableStations.slice(
+          : joinedStations.slice(
               prevAddedStationIndex,
               currentAddedStationIndex + 1
             );
@@ -57,10 +77,17 @@ export const useMakeCustomRoute = () => {
       if (prev.length === 1 && prev[0]?.length === 1) {
         return [stations];
       }
+
+      const isBranchLine = station.trainType?.kind === TrainTypeKind.BRANCH;
+
+      if (isBranchLine) {
+        return [...prev, stations.slice(1)];
+      }
+
       return [...prev, stations];
     });
 
-    const nextTransferableStations = (
+    const nextTransferableLines = (
       await getTransferableStations(station.groupId)
     )
       .filter((sta) => sta.id !== station.id)
@@ -70,18 +97,39 @@ export const useMakeCustomRoute = () => {
       )
       .map((sta) => sta.line)
       .filter((line) => line) as Line.AsObject[];
-    if (!nextTransferableStations.length) {
+
+    if (!nextTransferableLines.length) {
       setTransferableLines([]);
-      setReachableStations([]);
+      setReachableLocalStations([]);
+      setReachableBranchLineStations([]);
       setCompleted(true);
       return;
     }
-    setTransferableLines(nextTransferableStations);
-    setReachableStations([]);
+    setTransferableLines(nextTransferableLines);
+    setReachableLocalStations([]);
+    setReachableBranchLineStations([]);
   };
 
-  const updateFromLineId = async (lineId: number) => {
-    setReachableStations(await getStationsByLineId(lineId));
+  const updateReachableStations = async (
+    lineId: number,
+    stationId?: number
+  ) => {
+    const [localStations, branchLineStations] = await getStationsByLineId(
+      lineId,
+      stationId
+    );
+
+    setReachableLocalStations(localStations);
+
+    if (!branchLineStations.length) {
+      setReachableBranchLineStations(
+        localStations.filter(
+          (sta) => sta.trainType?.kind === TrainTypeKind.BRANCH
+        )
+      );
+    } else {
+      setReachableBranchLineStations(branchLineStations);
+    }
     setTransferableLines([]);
   };
 
@@ -92,7 +140,13 @@ export const useMakeCustomRoute = () => {
       flattenedAddedStations[flattenedAddedStations.length - 1];
 
     if (lastStation.line) {
-      setReachableStations(await getStationsByLineId(lastStation.line.id));
+      const [localStations, branchLineStations] = await getStationsByLineId(
+        lastStation.line.id,
+        lastStation.id
+      );
+
+      setReachableLocalStations(localStations);
+      setReachableBranchLineStations(branchLineStations);
     }
 
     if (!isPrevFirstStation) {
@@ -118,7 +172,8 @@ export const useMakeCustomRoute = () => {
 
   const clearResult = () => {
     setAddedStations([]);
-    setReachableStations([]);
+    setReachableLocalStations([]);
+    setReachableBranchLineStations([]);
     setTransferableLines([]);
     setCompleted(false);
   };
@@ -138,10 +193,11 @@ export const useMakeCustomRoute = () => {
 
   return {
     addedStations: addedStations.flat(),
-    reachableStations,
+    reachableLocalStations,
+    reachableBranchLineStations,
     addStation,
     handleSearch,
-    updateFromLineId,
+    updateReachableStations,
     back,
     clearResult,
     transferableLines,

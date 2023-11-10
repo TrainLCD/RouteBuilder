@@ -16,11 +16,12 @@ const { version } = pkg;
 export default function Home() {
   const {
     handleSearch,
-    updateFromLineId,
+    updateReachableStations,
     addStation,
     addedStations,
     back,
-    reachableStations,
+    reachableLocalStations,
+    reachableBranchLineStations,
     transferableLines,
     completed,
     clearResult,
@@ -28,6 +29,11 @@ export default function Home() {
   } = useMakeCustomRoute();
   const [firstStation] = addedStations;
   const lastStation = addedStations[addedStations.length - 1];
+
+  const reachableStations = [
+    ...reachableLocalStations,
+    ...reachableBranchLineStations,
+  ];
 
   const [searchResultEmpty, setSearchResultEmpty] = useState(false);
   const [selectedStationId, setSelectedStationId] = useState<
@@ -111,7 +117,7 @@ export default function Home() {
       return;
     }
     const lineId = parseInt(linesSelection.toString());
-    updateFromLineId(lineId);
+    updateReachableStations(lineId, lastStation.id);
     setSelectedStationId(undefined);
   };
 
@@ -122,6 +128,7 @@ export default function Home() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     const stationsSelection = formData.get("stations");
+
     if (!stationsSelection) {
       return;
     }
@@ -250,7 +257,7 @@ export default function Home() {
             </form>
           )}
 
-          {!!reachableStations.length && (
+          {!!reachableLocalStations.length && (
             <form className="mb-2" onSubmit={handleReachableStationSelected}>
               <label htmlFor="select-station-input" className="block">
                 {firstStation
@@ -268,12 +275,10 @@ export default function Home() {
               >
                 <optgroup
                   label={
-                    firstStation
-                      ? reachableStations[0]?.line?.nameShort
-                      : "始発駅"
+                    firstStation ? firstStation?.line?.nameShort : "始発駅"
                   }
                 >
-                  {reachableStations.map((sta) => (
+                  {reachableLocalStations.map((sta) => (
                     <option
                       disabled={
                         firstStation?.groupId === sta.groupId ||
@@ -290,6 +295,26 @@ export default function Home() {
                     </option>
                   ))}
                 </optgroup>
+                {!!reachableBranchLineStations.length && (
+                  <optgroup label="支線">
+                    {reachableBranchLineStations.map((sta) => (
+                      <option
+                        disabled={
+                          firstStation?.groupId === sta.groupId ||
+                          addedStations.some(
+                            (added) => added.groupId === sta.groupId
+                          )
+                        }
+                        key={sta.id}
+                        value={sta.id}
+                      >
+                        {!firstStation
+                          ? `${sta.name}(${sta.line?.nameShort})`
+                          : sta.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               <input
                 className="mr-1 bg-black text-white rounded ml-1 px-4 py-1 disabled:bg-neutral-500"
@@ -307,7 +332,7 @@ export default function Home() {
 
           {
             <p className="text-sm">
-              {reachableStations.length === FETCH_STATIONS_MAX_COUNT &&
+              {reachableLocalStations.length === FETCH_STATIONS_MAX_COUNT &&
                 `${FETCH_STATIONS_MAX_COUNT}件の検索結果が取得されました。目的の駅が表示されていない場合、検索条件を絞ってください。`}
             </p>
           }
@@ -420,7 +445,7 @@ export default function Home() {
                             }
                           >
                             {Object.entries(StopCondition).map(([key, val]) => (
-                              <option value={val} key={key}>
+                              <option value={val} key={val}>
                                 {STOP_CONDITION_LABELS[Number(val)]}
                               </option>
                             ))}
