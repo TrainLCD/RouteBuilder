@@ -3,10 +3,8 @@ import { StationAPIClient } from "../generated/StationapiServiceClientPb";
 import {
   GetStationByGroupIdRequest,
   GetStationByLineIdRequest,
-  GetStationsByLineGroupIdRequest,
   GetStationsByNameRequest,
-  GetTrainTypesByStationIdRequest,
-  TrainTypeKind,
+  Station,
 } from "../generated/stationapi_pb";
 
 export const useStationQuery = () => {
@@ -27,65 +25,20 @@ export const useStationQuery = () => {
       return Promise.reject(err);
     }
   };
-  const getTrainTypes = async (stationId: number) => {
-    try {
-      const req = new GetTrainTypesByStationIdRequest();
-      req.setStationId(stationId);
-      const res = await client.getTrainTypesByStationId(req, {});
-      return res.toObject().trainTypesList;
-    } catch (err) {
-      return Promise.reject(err);
+
+  const getStationsByLineId = async (station: Station.AsObject) => {
+    if (!station.line) {
+      return [[], []];
     }
-  };
-  const getStationsByLineId = async (lineId: number, stationId?: number) => {
     try {
       const req = new GetStationByLineIdRequest();
-      req.setLineId(lineId);
-      if (stationId) {
-        req.setStationId(stationId);
-      }
+      req.setLineId(station.line?.id);
+      req.setStationId(station.id);
 
       const res = await client.getStationsByLineId(req, {});
-      const stationsMaybeBranchLine = res
-        .toObject()
-        .stationsList.filter((sta) => sta.line?.id === lineId);
+      const localStations = res.toObject().stationsList;
 
-      if (!stationId) {
-        return [stationsMaybeBranchLine, []];
-      }
-
-      const trainTypes = await getTrainTypes(stationId);
-
-      const branchLineType = trainTypes.find(
-        (tt) => tt.kind === TrainTypeKind.BRANCH
-      );
-
-      if (!branchLineType) {
-        return [stationsMaybeBranchLine, []];
-      }
-
-      const localGroupType = trainTypes.find(
-        (tt) => tt.kind === TrainTypeKind.DEFAULT
-      );
-      if (!localGroupType) {
-        return [stationsMaybeBranchLine, []];
-      }
-
-      const branchLineStationsReq = new GetStationsByLineGroupIdRequest();
-      branchLineStationsReq.setLineGroupId(branchLineType.groupId);
-      const branchLineStationsRes = await client.getStationsByLineGroupId(
-        branchLineStationsReq,
-        {}
-      );
-
-      const localStations = stationsMaybeBranchLine;
-      const branchLineStations = branchLineStationsRes
-        .toObject()
-        .stationsList.filter(
-          (sta) => !localStations.some((s) => s.id === sta.id)
-        );
-
-      return [localStations, branchLineStations];
+      return [localStations, []];
     } catch (err) {
       return Promise.reject(err);
     }

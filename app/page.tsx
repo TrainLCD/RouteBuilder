@@ -11,12 +11,14 @@ import {
   STOP_CONDITION_LABELS,
 } from "./constants";
 import {
+  Line,
   Station,
   StopCondition,
   TrainDirection,
 } from "./generated/stationapi_pb";
 import { useAnonymousAuth, usePublishRoute } from "./hooks";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
+import { groupStations } from "./utils";
 
 const { version } = pkg;
 
@@ -28,7 +30,6 @@ export default function Home() {
     addedStations,
     back,
     reachableLocalStations,
-    reachableBranchLineStations,
     transferableLines,
     completed,
     clearResult,
@@ -37,16 +38,10 @@ export default function Home() {
   const [firstStation] = addedStations;
   const lastStation = addedStations[addedStations.length - 1];
 
-  const reachableStations = [
-    ...reachableLocalStations,
-    ...reachableBranchLineStations,
-  ];
-
   const [searchResultEmpty, setSearchResultEmpty] = useState(false);
-  const [selectedStationId, setSelectedStationId] = useState<
-    number | undefined
-  >();
-  const [selectedLineId, setSelectedLineId] = useState<number | undefined>();
+  const [selectedStation, setSelectedStation] =
+    useState<Station.AsObject | null>(null);
+  const [selectedLine, setSelectedLine] = useState<Line.AsObject | null>(null);
   const [uploading, setUploading] = useState(false);
   const [checkedAddedStations, setCheckedAddedStations] = useState<
     Station.AsObject[]
@@ -61,10 +56,22 @@ export default function Home() {
     useAnonymousAuth();
   const { publish: publishRoute, isPublishable } = usePublishRoute();
 
-  const handleSelectedStationChange = (e: ChangeEvent<HTMLSelectElement>) =>
-    setSelectedStationId(parseInt(e.currentTarget.value));
-  const handleSelectedLineChange = (e: ChangeEvent<HTMLSelectElement>) =>
-    setSelectedLineId(parseInt(e.currentTarget.value));
+  const handleSelectedStationChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const station =
+      reachableLocalStations.find(
+        (sta) => sta.id === parseInt(e.currentTarget.value)
+      ) ?? null;
+
+    setSelectedStation(station);
+    setSelectedLine(station?.line ?? null);
+  };
+  const handleSelectedLineChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSelectedLine(
+      transferableLines.find(
+        (line) => line.id === parseInt(e.currentTarget.value)
+      ) ?? null
+    );
+  };
 
   const handleCheckAddedStations = (
     e: ChangeEvent<HTMLInputElement>,
@@ -120,7 +127,7 @@ export default function Home() {
     }
     setSearchResultEmpty(false);
   };
-  const handleSelectLine = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSelectLine = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -129,11 +136,17 @@ export default function Home() {
       return;
     }
     const lineId = parseInt(linesSelection.toString());
-    updateReachableStations(lineId, lastStation.id);
-    setSelectedStationId(undefined);
+    const nextLine = lastStation.linesList.find((l) => l.id === lineId);
+    if (!nextLine?.station) {
+      return;
+    }
+    // NOTE: nextLine.station.lineはAPIの使用上入っていないので、手動で追加する
+    const nextStation = { ...nextLine.station, line: nextLine };
+    await updateReachableStations(nextStation);
+    setSelectedStation(null);
   };
 
-  const handleReachableStationSelected = (
+  const handleReachableStationSelected = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
     e.preventDefault();
@@ -145,11 +158,11 @@ export default function Home() {
       return;
     }
     const stationId = parseInt(stationsSelection.toString());
-    const station = reachableStations.find((sta) => sta.id === stationId);
+    const station = reachableLocalStations.find((sta) => sta.id === stationId);
     if (!station) {
       return;
     }
-    addStation(station);
+    await addStation(station);
   };
 
   const handleUpload = async () => {
@@ -246,6 +259,8 @@ export default function Home() {
       ]
     );
 
+  const groupedByLineIdStations = groupStations(reachableLocalStations);
+
   if (signInAnonymouslyError) {
     return (
       <main className="flex min-h-screen flex-col px-8 py-8 md:px-12">
@@ -301,7 +316,7 @@ export default function Home() {
                 name="lines"
                 id="select-line-input"
                 onChange={handleSelectedLineChange}
-                value={selectedLineId}
+                value={selectedLine?.id}
               >
                 <optgroup label={`${lastStation?.name}駅`}>
                   {transferableLines.map((line) => (
@@ -327,9 +342,7 @@ export default function Home() {
           {!!reachableLocalStations.length && (
             <form className="mb-2" onSubmit={handleReachableStationSelected}>
               <label htmlFor="select-station-input" className="block">
-                {firstStation
-                  ? `${lastStation.name}の次の停車駅`
-                  : "路線を選択"}
+                {lastStation ? `${lastStation.name}の次の停車駅` : "路線を選択"}
                 :
               </label>
               <select
@@ -337,60 +350,41 @@ export default function Home() {
                 className="border border-gray-400 rounded p-1 w-64"
                 name="stations"
                 id="select-station-input"
-                value={selectedStationId}
+                value={selectedStation?.id}
                 onChange={handleSelectedStationChange}
               >
-                <optgroup
-                  label={
-                    firstStation ? firstStation?.line?.nameShort : "始発駅"
-                  }
-                >
-                  {reachableLocalStations.map((sta) => (
-                    <option
-                      disabled={
-                        firstStation?.groupId === sta.groupId ||
-                        addedStations.some(
-                          (added) => added.groupId === sta.groupId
-                        )
-                      }
-                      key={sta.id}
-                      value={sta.id}
-                    >
-                      {!firstStation
-                        ? `${sta.name}(${sta.line?.nameShort})`
-                        : sta.name}
-                    </option>
-                  ))}
-                </optgroup>
-                {!!reachableBranchLineStations.length && (
-                  <optgroup label="支線">
-                    {reachableBranchLineStations.map((sta) => (
+                {groupedByLineIdStations.map((arr, idx, self) => (
+                  <optgroup
+                    key={self[idx][0]?.id}
+                    label={self[idx][0].line?.nameShort ?? ""}
+                  >
+                    {arr.map((sta) => (
                       <option
+                        key={sta.id}
                         disabled={
-                          firstStation?.groupId === sta.groupId ||
+                          lastStation?.groupId === sta.groupId ||
                           addedStations.some(
                             (added) => added.groupId === sta.groupId
                           )
                         }
-                        key={sta.id}
                         value={sta.id}
                       >
-                        {!firstStation
-                          ? `${sta.name}(${sta.line?.nameShort})`
-                          : sta.name}
+                        {sta.name}
                       </option>
                     ))}
                   </optgroup>
-                )}
+                ))}
               </select>
               <input
                 className="mr-1 bg-black text-white rounded ml-1 px-4 py-1 disabled:bg-neutral-500"
-                value={firstStation ? "追加" : "指定"}
+                value={lastStation ? "追加" : "指定"}
                 type="submit"
                 disabled={
-                  firstStation
-                    ? (addedStations.length === 1 && !selectedStationId) ||
-                      addedStations.some((sta) => sta.id === selectedStationId)
+                  lastStation
+                    ? (addedStations.length === 1 && !selectedStation?.id) ||
+                      addedStations.some(
+                        (sta) => sta.id === selectedStation?.id
+                      )
                     : false
                 }
               />
@@ -418,7 +412,7 @@ export default function Home() {
               アプリで使用する
             </button>
 
-            {firstStation && (
+            {lastStation && (
               <>
                 <button
                   onClick={back}
