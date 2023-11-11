@@ -26,7 +26,7 @@ export const useStationQuery = () => {
     }
   };
 
-  const getStationsByLineId = async (station: Station.AsObject) => {
+  const getStations = async (station: Station.AsObject) => {
     if (!station.line) {
       return [[], []];
     }
@@ -56,7 +56,7 @@ export const useStationQuery = () => {
 
   return {
     searchStation,
-    getStationsByLineId,
+    getStations,
     getTransferableStations,
   };
 };

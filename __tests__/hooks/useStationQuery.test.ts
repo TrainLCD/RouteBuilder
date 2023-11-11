@@ -1,5 +1,6 @@
 import { STUB_DB } from "@/app/constants";
 import { StationAPIClient } from "@/app/generated/StationapiServiceClientPb";
+import { Station } from "@/app/generated/stationapi_pb";
 import { useStationQuery } from "@/app/hooks";
 import { renderHook } from "@testing-library/react";
 
@@ -75,10 +76,13 @@ describe("useStationQuery", () => {
   });
   it("All stations matching the line id should return", async () => {
     const { result } = renderHook(() => useStationQuery());
-    const results = await result.current.getStationsByLineId(0);
+    const results = await result.current.getStations({
+      id: 0,
+      line: { id: 0 },
+    } as Station.AsObject);
     // TODO: ちゃんと支線含めて返ってくるか確認する
     expect(results).toHaveLength(2);
-    expect(results).toEqual([[], []]);
+    expect(results).toEqual([STUB_DB.stations, []]);
   });
   it("All transferable stations should return", async () => {
     const { result } = renderHook(() => useStationQuery());
@@ -88,8 +92,11 @@ describe("useStationQuery", () => {
   });
   it("The line to which the station belongs should return from the specified station ID.", async () => {
     const { result } = renderHook(() => useStationQuery());
-    const results = await result.current.getStationsByLineId(0);
+    const results = await result.current.getStations({
+      id: 0,
+      line: { id: 0 },
+    } as Station.AsObject);
     // TODO: ここもちゃんと支線含めて返ってくるか確認する
-    expect(results).toEqual([[], []]);
+    expect(results).toEqual([STUB_DB.stations, []]);
   });
 });

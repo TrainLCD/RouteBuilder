@@ -32,7 +32,6 @@ describe("utils/group.ts", () => {
     ];
 
     const result = groupStations(stations as Station.AsObject[]);
-    console.log(JSON.stringify(result));
 
     expect(result).toEqual(expected);
   });

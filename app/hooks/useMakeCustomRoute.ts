@@ -14,7 +14,7 @@ export const useMakeCustomRoute = () => {
   );
   const [completed, setCompleted] = useState(false);
 
-  const { searchStation, getTransferableStations, getStationsByLineId } =
+  const { searchStation, getTransferableStations, getStations } =
     useStationQuery();
 
   const handleSearch = async (query: string | null) => {
@@ -31,7 +31,7 @@ export const useMakeCustomRoute = () => {
       return;
     }
 
-    const [localStations] = await getStationsByLineId(station);
+    const [localStations] = await getStations(station);
 
     if (!addedStations.length) {
       setAddedStations((prev) => [...prev, [station]]);
@@ -89,7 +89,7 @@ export const useMakeCustomRoute = () => {
   };
 
   const updateReachableStations = async (station: Station.AsObject) => {
-    const [localStations] = await getStationsByLineId(station);
+    const [localStations] = await getStations(station);
 
     setReachableLocalStations(localStations);
     setTransferableLines([]);
@@ -102,7 +102,7 @@ export const useMakeCustomRoute = () => {
       flattenedAddedStations[flattenedAddedStations.length - 1];
 
     if (lastStation.line) {
-      const [localStations] = await getStationsByLineId(lastStation);
+      const [localStations] = await getStations(lastStation);
 
       setReachableLocalStations(localStations);
     }
