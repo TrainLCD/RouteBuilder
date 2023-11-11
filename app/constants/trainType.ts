@@ -7,7 +7,7 @@ export const RESERVED_TRAIN_TYPES = {
     typeId: 1000,
     groupId: 1000,
     name: "普通",
-    name_katakana: "フツウ",
+    nameKatakana: "フツウ",
     color: "#1F63C6",
     direction: TrainDirection.BOTH,
     kind: TrainTypeKind.DEFAULT,
@@ -21,7 +21,7 @@ export const RESERVED_TRAIN_TYPES = {
     typeId: 1001,
     groupId: 1001,
     name: "各駅停車",
-    name_katakana: "カクエキテイシャ",
+    nameKatakana: "カクエキテイシャ",
     color: "#1F63C6",
     direction: TrainDirection.BOTH,
     kind: TrainTypeKind.DEFAULT,
@@ -35,7 +35,7 @@ export const RESERVED_TRAIN_TYPES = {
     typeId: 1002,
     groupId: 1002,
     name: "快速",
-    name_katakana: "カイソク",
+    nameKatakana: "カイソク",
     color: "#DC143C",
     direction: TrainDirection.BOTH,
     kind: TrainTypeKind.RAPID,
@@ -49,7 +49,7 @@ export const RESERVED_TRAIN_TYPES = {
     typeId: 1003,
     groupId: 1003,
     name: "急行",
-    name_katakana: "キュウコウ",
+    nameKatakana: "キュウコウ",
     color: "#DC143C",
     direction: TrainDirection.BOTH,
     kind: TrainTypeKind.EXPRESS,
@@ -63,7 +63,7 @@ export const RESERVED_TRAIN_TYPES = {
     typeId: 1004,
     groupId: 1004,
     name: "特急",
-    name_katakana: "トッキュウ",
+    nameKatakana: "トッキュウ",
     color: "#DC143C",
     direction: TrainDirection.BOTH,
     kind: TrainTypeKind.LIMITEDEXPRESS,
@@ -74,3 +74,23 @@ export const RESERVED_TRAIN_TYPES = {
 } as const;
 export type ReservedTrainType =
   (typeof RESERVED_TRAIN_TYPES)[keyof typeof RESERVED_TRAIN_TYPES];
+
+export const AVAILABLE_TRAIN_TYPES = {
+  ...RESERVED_TRAIN_TYPES,
+  CUSTOM: {
+    lines: [],
+    id: 2000,
+    typeId: 2000,
+    groupId: 2000,
+    name: "カスタム",
+    nameKatakana: "カスタム",
+    color: "#0D0C09",
+    direction: TrainDirection.BOTH,
+    kind: TrainTypeKind.LIMITEDEXPRESS,
+    nameRoman: "Custom",
+    nameChinese: "定制",
+    nameKorean: "사용자 정의",
+  },
+};
+export type AvailableTrainType =
+  (typeof AVAILABLE_TRAIN_TYPES)[keyof typeof AVAILABLE_TRAIN_TYPES];

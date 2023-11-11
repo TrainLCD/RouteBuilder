@@ -8,5 +8,5 @@ export type { FirestoreCollectionPath } from "./firestore";
 export { PREFECTURES_JA } from "./province";
 export { STOP_CONDITION_LABELS } from "./stopCondition";
 export { STUB_DB } from "./stubDB";
-export { RESERVED_TRAIN_TYPES } from "./trainType";
-export type { ReservedTrainType } from "./trainType";
+export { AVAILABLE_TRAIN_TYPES, RESERVED_TRAIN_TYPES } from "./trainType";
+export type { AvailableTrainType, ReservedTrainType } from "./trainType";

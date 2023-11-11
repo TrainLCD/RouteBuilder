@@ -8,11 +8,11 @@ import {
 import { nanoid } from "nanoid";
 import { useAnonymousAuth } from ".";
 import {
+  AvailableTrainType,
   CustomRoute,
   FIRESTORE_COLLECTION_PATH,
   PUBLISH_ERROR_CODE,
   ROUTE_VISIBILITY,
-  ReservedTrainType,
 } from "../constants";
 import { Station } from "../generated/stationapi_pb";
 import { firestore } from "../vendor";
@@ -52,7 +52,7 @@ export const usePublishRoute = () => {
   const publish = async (inputData: {
     name: string;
     stations: Station.AsObject[];
-    trainType: ReservedTrainType;
+    trainType: AvailableTrainType;
   }) => {
     if (!anonymousUser) {
       return;

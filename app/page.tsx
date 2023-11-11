@@ -1,15 +1,20 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import pkg from "../package.json";
 import {
+  AVAILABLE_TRAIN_TYPES,
+  AvailableTrainType,
   FETCH_STATIONS_MAX_COUNT,
   PublishErrorCode,
   RESERVED_TRAIN_TYPES,
-  ReservedTrainType,
   STOP_CONDITION_LABELS,
 } from "./constants";
-import { Station, StopCondition } from "./generated/stationapi_pb";
+import {
+  Station,
+  StopCondition,
+  TrainDirection,
+} from "./generated/stationapi_pb";
 import { useAnonymousAuth, usePublishRoute } from "./hooks";
 import { useMakeCustomRoute } from "./hooks/useMakeCustomRoute";
 
@@ -46,9 +51,11 @@ export default function Home() {
   const [checkedAddedStations, setCheckedAddedStations] = useState<
     Station.AsObject[]
   >([]);
-  const [selectedType, setSelectedType] = useState<ReservedTrainType>(
-    RESERVED_TRAIN_TYPES.LOCAL
+  const [selectedType, setSelectedType] = useState<AvailableTrainType>(
+    AVAILABLE_TRAIN_TYPES.LOCAL
   );
+
+  const customTypeFormRef = useRef<HTMLFormElement | null>(null);
 
   const { user: anonymousUser, error: signInAnonymouslyError } =
     useAnonymousAuth();
@@ -152,15 +159,64 @@ export default function Home() {
         "保存するルート名を入力してください",
         placeholderName
       );
-      if (!newTypeName) {
+      if (!newTypeName || !customTypeFormRef.current) {
         return;
       }
+
       setUploading(true);
+
+      const formData = new FormData(customTypeFormRef.current);
+
+      const customTypeName =
+        formData.get("custom-type-name")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.name;
+      const customTypeKatakana =
+        formData.get("custom-type-katakana")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.nameKatakana;
+      const customTypeRoman =
+        formData.get("custom-type-roman")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.nameRoman;
+      const customTypeChinese =
+        formData.get("custom-type-chinese")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.nameChinese;
+      const customTypeColor =
+        formData.get("custom-type-color")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.color;
+      const customTypeKorean =
+        formData.get("custom-type-korean")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.CUSTOM.nameKorean;
+      const customTypeKey =
+        formData.get("custom-type-base")?.toString() ||
+        AVAILABLE_TRAIN_TYPES.LOCAL2;
+      const { kind: customTypeKind } =
+        RESERVED_TRAIN_TYPES[
+          customTypeKey as keyof typeof RESERVED_TRAIN_TYPES
+        ];
+
+      const customType: AvailableTrainType | null =
+        selectedType === AVAILABLE_TRAIN_TYPES.CUSTOM
+          ? {
+              ...AVAILABLE_TRAIN_TYPES.CUSTOM,
+              lines: [],
+              id: 2000,
+              typeId: 2000,
+              groupId: 2000,
+              name: customTypeName,
+              nameKatakana: customTypeKatakana,
+              color: customTypeColor,
+              direction: TrainDirection.BOTH,
+              kind: customTypeKind,
+              nameRoman: customTypeRoman,
+              nameChinese: customTypeChinese,
+              nameKorean: customTypeKorean,
+            }
+          : null;
+
       if (await isPublishable({ name: newTypeName })) {
         await publishRoute({
-          name: newTypeName ?? placeholderName,
+          name: newTypeName || placeholderName,
           stations: addedStations,
-          trainType: selectedType,
+          trainType: customType || selectedType,
         });
       }
       setUploading(false);
@@ -185,8 +241,8 @@ export default function Home() {
 
   const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) =>
     setSelectedType(
-      RESERVED_TRAIN_TYPES[
-        e.currentTarget.value as keyof typeof RESERVED_TRAIN_TYPES
+      AVAILABLE_TRAIN_TYPES[
+        e.currentTarget.value as keyof typeof AVAILABLE_TRAIN_TYPES
       ]
     );
 
@@ -382,15 +438,108 @@ export default function Home() {
           <p className="font-bold mt-4">オプション:</p>
 
           <select
-            className="border border-gray-400 rounded bg-white disabled:bg-gray-200 py-1"
+            className="border border-gray-400 rounded bg-white w-48 disabled:bg-gray-200 py-1"
             onChange={handleTypeChange}
           >
-            {Object.entries(RESERVED_TRAIN_TYPES).map(([key, value]) => (
+            {Object.entries(AVAILABLE_TRAIN_TYPES).map(([key, value]) => (
               <option key={key} value={key}>
                 {value.name}
               </option>
             ))}
           </select>
+
+          {selectedType === AVAILABLE_TRAIN_TYPES.CUSTOM && (
+            <div className="mt-4">
+              <p className="font-bold mt-2">種別をカスタマイズ:</p>
+              <form
+                ref={customTypeFormRef}
+                className="mt-2 flex justify-center gap-y-3 flex-col"
+              >
+                <div className="flex">
+                  <label htmlFor="custom-type-base" className="mr-1 w-36">
+                    ベース種別:
+                  </label>
+                  <select
+                    id="custom-type-base"
+                    name="custom-type-base"
+                    className="border border-gray-400 rounded bg-white w-48 disabled:bg-gray-200 py-1"
+                  >
+                    {Object.entries(RESERVED_TRAIN_TYPES).map(
+                      ([key, value]) => (
+                        <option key={key} value={key}>
+                          {value.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+                <div className="flex">
+                  <label className="mr-1 w-36">種別カラー:</label>
+                  <input
+                    type="color"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.color}
+                    className="border-0 rounded w-48 block"
+                    name="custom-type-color"
+                  />
+                </div>
+                <div className="flex">
+                  <label htmlFor="custom-type-name" className="mr-1 w-36">
+                    種別名:
+                  </label>
+                  <input
+                    className="border border-gray-400 rounded p-1 w-48 block"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.name}
+                    id="custom-type-name"
+                    name="custom-type-name"
+                  />
+                </div>
+                <div className="flex">
+                  <label htmlFor="custom-type-katakana" className="mr-1 w-36">
+                    種別名(カタカナ):
+                  </label>
+                  <input
+                    className="border border-gray-400 rounded p-1 w-48"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.nameKatakana}
+                    id="custom-type-katakana"
+                    name="custom-type-katakana"
+                  />
+                </div>
+                <div className="flex">
+                  <label htmlFor="custom-type-katakana" className="mr-1 w-36">
+                    種別名(ローマ字):
+                  </label>
+                  <input
+                    className="border border-gray-400 rounded p-1 w-48"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.nameRoman}
+                    id="custom-type-roman"
+                    name="custom-type-roman"
+                  />
+                </div>
+                <div className="flex">
+                  <label htmlFor="custom-type-chinese" className="mr-1 w-36">
+                    種別名(中国語):
+                  </label>
+                  <input
+                    className="border border-gray-400 rounded p-1 w-48"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.nameChinese}
+                    id="custom-type-chinese"
+                    name="custom-type-chinese"
+                  />
+                </div>
+                <div className="flex">
+                  <label htmlFor="custom-type-korean" className="mr-1 w-36">
+                    種別名(韓国語):
+                  </label>
+                  <input
+                    className="border border-gray-400 rounded p-1 w-48"
+                    placeholder={AVAILABLE_TRAIN_TYPES.CUSTOM.nameKorean}
+                    id="custom-type-korean"
+                    name="custom-type-korean"
+                  />
+                </div>
+              </form>
+            </div>
+          )}
         </div>
         <div className="flex-1 w-full mt-8 md:mt-0">
           {!!addedStations.length && (
