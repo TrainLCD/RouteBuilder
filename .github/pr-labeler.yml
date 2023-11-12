@@ -1,2 +1,4 @@
-feature: 'feature/*'
+feature: feature/*
 fix: fix/*
+chore: chore/*
+release: release/*
