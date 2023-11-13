@@ -172,11 +172,22 @@ export default function Home() {
         "保存するルート名を入力してください",
         placeholderName
       );
-      if (!newTypeName || !customTypeFormRef.current) {
-        return;
-      }
+      const routeName = newTypeName || placeholderName;
 
       setUploading(true);
+
+      if (!customTypeFormRef.current) {
+        if (await isPublishable({ name: routeName })) {
+          await publishRoute({
+            name: routeName,
+            stations: addedStations,
+            trainType: selectedType,
+          });
+        }
+
+        setUploading(false);
+        return;
+      }
 
       const formData = new FormData(customTypeFormRef.current);
 
@@ -225,9 +236,9 @@ export default function Home() {
             }
           : null;
 
-      if (await isPublishable({ name: newTypeName })) {
+      if (await isPublishable({ name: routeName })) {
         await publishRoute({
-          name: newTypeName || placeholderName,
+          name: routeName,
           stations: addedStations,
           trainType: customType || selectedType,
         });
