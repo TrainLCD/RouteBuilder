@@ -28,7 +28,7 @@ export const useStationQuery = () => {
 
   const getStations = async (station: Station.AsObject) => {
     if (!station.line) {
-      return [[], []];
+      return [];
     }
     try {
       const req = new GetStationByLineIdRequest();
@@ -38,11 +38,12 @@ export const useStationQuery = () => {
       const res = await client.getStationsByLineId(req, {});
       const localStations = res.toObject().stationsList;
 
-      return [localStations, []];
+      return localStations;
     } catch (err) {
       return Promise.reject(err);
     }
   };
+
   const getTransferableStations = async (groupId: number) => {
     try {
       const req = new GetStationByGroupIdRequest();

@@ -59,7 +59,7 @@ export default function Home() {
   const handleSelectedStationChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const station =
       reachableLocalStations.find(
-        (sta) => sta.id === parseInt(e.currentTarget.value)
+        (sta) => sta.id === Number(e.currentTarget.value)
       ) ?? null;
 
     setSelectedStation(station);
@@ -68,7 +68,7 @@ export default function Home() {
   const handleSelectedLineChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedLine(
       transferableLines.find(
-        (line) => line.id === parseInt(e.currentTarget.value)
+        (line) => line.id === Number(e.currentTarget.value)
       ) ?? null
     );
   };
@@ -135,15 +135,15 @@ export default function Home() {
     if (!linesSelection) {
       return;
     }
-    const lineId = parseInt(linesSelection.toString());
-    const nextLine = lastStation.linesList.find((l) => l.id === lineId);
+    const lineId = Number(linesSelection.toString());
+    const nextLine = transferableLines.find((l) => l.id === lineId);
     if (!nextLine?.station) {
       return;
     }
     // NOTE: nextLine.station.lineはAPIの使用上入っていないので、手動で追加する
     const nextStation = { ...nextLine.station, line: nextLine };
     await updateReachableStations(nextStation);
-    setSelectedStation(null);
+    setSelectedStation(nextStation);
   };
 
   const handleReachableStationSelected = async (
@@ -157,12 +157,13 @@ export default function Home() {
     if (!stationsSelection) {
       return;
     }
-    const stationId = parseInt(stationsSelection.toString());
+    const stationId = Number(stationsSelection.toString());
     const station = reachableLocalStations.find((sta) => sta.id === stationId);
     if (!station) {
       return;
     }
     await addStation(station);
+    setSelectedStation(station);
   };
 
   const handleUpload = async () => {
@@ -414,7 +415,7 @@ export default function Home() {
               駅には乗換駅がありません
             </p>
           )}
-          <div className="flex">
+          <div className="flex mt-4">
             <button
               onClick={handleUpload}
               disabled={addedStations.length <= 1 || uploading}

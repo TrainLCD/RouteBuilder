@@ -31,49 +31,45 @@ export const useMakeCustomRoute = () => {
       return;
     }
 
-    const [localStations] = await getStations(station);
+    const localStations = await getStations(station);
 
     if (!addedStations.length) {
-      setAddedStations((prev) => [...prev, [station]]);
+      setAddedStations([[station]]);
       setReachableLocalStations(localStations);
       return;
     }
 
-    setAddedStations((prev) => {
-      const prevAddedStationIndex = localStations.findIndex((sta) => {
-        const prevLastArray = prev[prev.length - 1];
-        if (!prevLastArray) {
-          return false;
-        }
-        return sta.groupId === prevLastArray[prevLastArray.length - 1]?.groupId;
-      });
-      const currentAddedStationIndex = localStations.findIndex(
-        (sta) => sta.groupId === station.groupId
-      );
-      const stations =
-        prevAddedStationIndex > currentAddedStationIndex
-          ? localStations
-              .slice(currentAddedStationIndex, prevAddedStationIndex + 1)
-              .reverse()
-          : localStations.slice(
-              prevAddedStationIndex,
-              currentAddedStationIndex + 1
-            );
-      // 始発駅しか入っていない配列はもはや不要のため置き換える
-      if (prev.length === 1 && prev[0]?.length === 1) {
-        return [stations];
-      }
-
-      return [...prev, stations];
+    const prevAddedStationIndex = localStations.findIndex((sta) => {
+      const prevLastArray = addedStations[addedStations.length - 1];
+      return prevLastArray.some((prevSta) => prevSta.groupId === sta.groupId);
     });
+
+    const currentAddedStationIndex = localStations.findIndex(
+      (sta) => sta.groupId === station.groupId
+    );
+    const stations =
+      prevAddedStationIndex > currentAddedStationIndex
+        ? localStations
+            .slice(currentAddedStationIndex, prevAddedStationIndex + 1)
+            .reverse()
+        : localStations.slice(
+            prevAddedStationIndex,
+            currentAddedStationIndex + 1
+          );
+
+    // 始発駅しか入っていない配列はもはや不要のため置き換える
+    if (addedStations.length === 1 && addedStations[0]?.length === 1) {
+      setAddedStations([stations]);
+    } else {
+      setAddedStations((prev) => [...prev, stations]);
+    }
 
     const nextTransferableLines = (
       await getTransferableStations(station.groupId)
     )
       .filter((sta) => sta.id !== station.id)
       .filter(
-        (sta) =>
-          !addedStations.flat().some((added) => added.groupId === sta.groupId)
+        (sta) => !addedStations.flat().some((added) => added.id === sta.id)
       )
       .map((sta) => sta.line)
       .filter((line) => line) as Line.AsObject[];
@@ -89,7 +85,7 @@ export const useMakeCustomRoute = () => {
   };
 
   const updateReachableStations = async (station: Station.AsObject) => {
-    const [localStations] = await getStations(station);
+    const localStations = await getStations(station);
 
     setReachableLocalStations(localStations);
     setTransferableLines([]);
@@ -102,7 +98,7 @@ export const useMakeCustomRoute = () => {
       flattenedAddedStations[flattenedAddedStations.length - 1];
 
     if (lastStation.line) {
-      const [localStations] = await getStations(lastStation);
+      const localStations = await getStations(lastStation);
 
       setReachableLocalStations(localStations);
     }
