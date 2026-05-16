@@ -1,4 +1,10 @@
 // Typed wrappers around the upstream TrainLCD GraphQL operations the BFF needs.
+//
+// Every query that exposes the `transportType` argument is pinned to `Rail`.
+// Route Builder only deals with trains; bus stops/lines (and bus components
+// of station.lines arrays) would only add noise to search and the line
+// pills. `Rail` is one of the TransportType enum values
+// (`TransportTypeUnspecified | Rail | Bus | RailAndBus`).
 
 import { gql } from './upstream';
 
@@ -51,7 +57,7 @@ export async function upstreamSearchStationsByName(
 ): Promise<ApiStation[]> {
   const data = await gql<{ stationsByName: ApiStation[] }>(
     `query SearchByName($name: String!, $limit: Int) {
-      stationsByName(name: $name, limit: $limit) { ${STATION_FIELDS} }
+      stationsByName(name: $name, limit: $limit, transportType: Rail) { ${STATION_FIELDS} }
     }`,
     { name, limit },
   );
@@ -64,7 +70,7 @@ export async function upstreamStationsByIds(
   if (ids.length === 0) return [];
   const data = await gql<{ stations: ApiStation[] }>(
     `query StationsBatch($ids: [Int!]!) {
-      stations(ids: $ids) { ${STATION_FIELDS} }
+      stations(ids: $ids, transportType: Rail) { ${STATION_FIELDS} }
     }`,
     { ids },
   );
@@ -77,13 +83,15 @@ export async function upstreamLineListStations(
   if (lineIds.length === 0) return [];
   const data = await gql<{ lineListStations: ApiStation[] }>(
     `query LineListStations($lineIds: [Int!]!) {
-      lineListStations(lineIds: $lineIds) { ${STATION_FIELDS} }
+      lineListStations(lineIds: $lineIds, transportType: Rail) { ${STATION_FIELDS} }
     }`,
     { lineIds },
   );
   return data.lineListStations;
 }
 
+// `line(lineId)` doesn't take a transportType argument — it returns the
+// single Line record by id regardless.
 export async function upstreamLine(lineId: number): Promise<ApiLine | null> {
   const data = await gql<{ line: ApiLine | null }>(
     `query GetLine($lineId: Int!) {
@@ -99,7 +107,7 @@ export async function upstreamStationGroupStations(
 ): Promise<ApiStation[]> {
   const data = await gql<{ stationGroupStations: ApiStation[] }>(
     `query GroupStations($groupId: Int!) {
-      stationGroupStations(groupId: $groupId) { ${STATION_FIELDS} }
+      stationGroupStations(groupId: $groupId, transportType: Rail) { ${STATION_FIELDS} }
     }`,
     { groupId },
   );
