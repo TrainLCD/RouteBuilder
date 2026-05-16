@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Route } from '../lib/data';
-import { deepLinkForRoute, type DeepLinkChannel } from '../lib/deeplink';
+import {
+  directDeepLinkForRoute,
+  shortDeepLinkForRoute,
+  type DeepLinkChannel,
+} from '../lib/deeplink';
 import { useDataStore } from '../lib/hooks/useDataStore';
 import { useRouteData } from '../lib/hooks/useRouteData';
 import type { Lang } from '../lib/i18n';
@@ -15,6 +19,12 @@ type Props = {
   onClose: () => void;
 };
 
+type LinkState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; url: string }
+  | { kind: 'error'; fallbackUrl: string | null };
+
 export function ExportPanel({ route, lang, onClose }: Props) {
   useRouteData(route.stations);
   useDataStore();
@@ -23,12 +33,52 @@ export function ExportPanel({ route, lang, onClose }: Props) {
   const [copied, setCopied] = useState(false);
   const [canary, setCanary] = useState(false);
   const channel: DeepLinkChannel = canary ? 'canary' : 'prod';
-  const link = deepLinkForRoute(route, channel);
+  const [linkState, setLinkState] = useState<LinkState>({ kind: 'idle' });
+
+  // Compute the short URL whenever the route or channel changes. Short URLs
+  // are content-addressed so re-exporting the same route returns the same id.
+  useEffect(() => {
+    if (route.stations.length < 2) {
+      setLinkState({ kind: 'idle' });
+      return;
+    }
+    const controller = new AbortController();
+    setLinkState({ kind: 'loading' });
+    void (async () => {
+      try {
+        const url = await shortDeepLinkForRoute(route, channel, controller.signal);
+        if (controller.signal.aborted) return;
+        if (url) {
+          setLinkState({ kind: 'ready', url });
+        } else {
+          setLinkState({
+            kind: 'error',
+            fallbackUrl: directDeepLinkForRoute(route, channel),
+          });
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setLinkState({
+            kind: 'error',
+            fallbackUrl: directDeepLinkForRoute(route, channel),
+          });
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [route, channel]);
+
+  const displayUrl =
+    linkState.kind === 'ready'
+      ? linkState.url
+      : linkState.kind === 'error'
+        ? linkState.fallbackUrl
+        : null;
 
   const copy = async () => {
-    if (!link) return;
+    if (!displayUrl) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(displayUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -53,16 +103,40 @@ export function ExportPanel({ route, lang, onClose }: Props) {
 
       <div className="qr-wrap">
         <div className="qr">
-          {link ? <QR data={link} /> : null}
+          {displayUrl ? <QR data={displayUrl} /> : null}
         </div>
         <div>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             {lang === 'en' ? 'Share this route' : 'このルートを共有'}
           </div>
-          {link ? (
+          {linkState.kind === 'idle' && (
+            <div className="muted" style={{ fontSize: 12 }}>
+              {lang === 'en'
+                ? 'Add at least two connected stations to generate a TrainLCD link.'
+                : 'TrainLCDリンクを生成するには接続された駅を2つ以上追加してください'}
+            </div>
+          )}
+          {linkState.kind === 'loading' && (
+            <div className="muted" style={{ fontSize: 12 }}>
+              {lang === 'en' ? 'Generating short link…' : '短縮リンクを生成中…'}
+            </div>
+          )}
+          {(linkState.kind === 'ready' || (linkState.kind === 'error' && linkState.fallbackUrl)) && displayUrl && (
             <>
+              {linkState.kind === 'error' && (
+                <div className="muted" style={{ fontSize: 12, marginBottom: 6, color: 'var(--warn-fg)' }}>
+                  {lang === 'en'
+                    ? 'Short link unavailable — using full URL.'
+                    : '短縮リンクを取得できなかったため、フルURLを表示しています'}
+                </div>
+              )}
               <div className="row" style={{ gap: 6 }}>
-                <input className="input mono" style={{ fontSize: 11.5, padding: '6px 10px' }} value={link} readOnly />
+                <input
+                  className="input mono"
+                  style={{ fontSize: 11.5, padding: '6px 10px' }}
+                  value={displayUrl}
+                  readOnly
+                />
                 <button className="btn" onClick={() => void copy()}>
                   <Icon name={copied ? 'check' : 'copy'} />
                   {copied ? (lang === 'en' ? 'Copied' : 'コピー済') : (lang === 'en' ? 'Copy' : 'コピー')}
@@ -81,7 +155,7 @@ export function ExportPanel({ route, lang, onClose }: Props) {
                 <span>{lang === 'en' ? 'Canary release' : 'カナリアリリース用'}</span>
               </label>
               <div className="row" style={{ gap: 8, marginTop: 10 }}>
-                <a className="btn btn-primary" href={link}>
+                <a className="btn btn-primary" href={displayUrl}>
                   <Icon name="export" />{lang === 'en' ? 'Open in TrainLCD' : 'TrainLCDで開く'}
                 </a>
                 <button className="btn" onClick={() => void copy()}>
@@ -89,11 +163,12 @@ export function ExportPanel({ route, lang, onClose }: Props) {
                 </button>
               </div>
             </>
-          ) : (
-            <div className="muted" style={{ fontSize: 12 }}>
+          )}
+          {linkState.kind === 'error' && !linkState.fallbackUrl && (
+            <div className="muted" style={{ fontSize: 12, color: 'var(--warn-fg)' }}>
               {lang === 'en'
-                ? 'Add at least two connected stations to generate a TrainLCD link.'
-                : 'TrainLCDリンクを生成するには接続された駅を2つ以上追加してください'}
+                ? 'Could not generate a link. Try again later.'
+                : 'リンクを生成できませんでした。時間をおいて再度お試しください'}
             </div>
           )}
         </div>
