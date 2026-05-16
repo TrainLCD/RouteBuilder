@@ -1,7 +1,14 @@
 /// <reference lib="webworker" />
 import { defaultCache } from '@serwist/next/worker';
-import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { Serwist } from 'serwist';
+import type { PrecacheEntry, RuntimeCaching, SerwistGlobalConfig } from 'serwist';
+import {
+  CacheableResponsePlugin,
+  CacheFirst,
+  ExpirationPlugin,
+  NetworkFirst,
+  Serwist,
+  StaleWhileRevalidate,
+} from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -12,24 +19,86 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+const ONE_HOUR = 60 * 60;
+const ONE_DAY = ONE_HOUR * 24;
+const ONE_MONTH = ONE_DAY * 30;
+const ONE_YEAR = ONE_DAY * 365;
+
+/**
+ * Runtime caching rules for the BFF endpoints. Together with the precached
+ * shell + the localStorage-resident route state, these give the app a
+ * usable offline mode: saved routes render with full station/line data
+ * even when the upstream is unreachable.
+ */
+const apiCaching: RuntimeCaching[] = [
+  {
+    // Shortened-route lookup. The id is the SHA-256 prefix of the sids
+    // list, so the response body never changes for a given id — a plain
+    // CacheFirst with a long expiration is safe.
+    matcher: ({ url, sameOrigin, request }) =>
+      sameOrigin &&
+      request.method === 'GET' &&
+      /^\/api\/routes\/[A-Za-z0-9_-]+$/.test(url.pathname),
+    handler: new CacheFirst({
+      cacheName: 'rb-routes-immutable',
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [200] }),
+        new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: ONE_YEAR }),
+      ],
+    }),
+  },
+  {
+    // TrainLCD station / line / line-list / station-group reads.
+    // Stale-while-revalidate gives instant cache hits while refreshing
+    // the next visit. Station and line data change at most every few
+    // months in practice, so seeing one-visit-stale data is acceptable.
+    matcher: ({ url, sameOrigin, request }) => {
+      if (!sameOrigin || request.method !== 'GET') return false;
+      const p = url.pathname;
+      return (
+        p.startsWith('/api/trainlcd/stations') ||
+        p.startsWith('/api/trainlcd/line-list-stations') ||
+        p.startsWith('/api/trainlcd/line/') ||
+        p.startsWith('/api/trainlcd/station-group/')
+      );
+    },
+    handler: new StaleWhileRevalidate({
+      cacheName: 'rb-trainlcd-data',
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [200] }),
+        new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: ONE_MONTH }),
+      ],
+    }),
+  },
+  {
+    // Search: try the network first so live results win, but fall back
+    // to a previously-cached response if the user is offline or the
+    // upstream is slow. Short TTL because results can drift.
+    matcher: ({ url, sameOrigin }) =>
+      sameOrigin && url.pathname === '/api/trainlcd/search',
+    handler: new NetworkFirst({
+      cacheName: 'rb-search',
+      networkTimeoutSeconds: 5,
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [200] }),
+        new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: ONE_DAY }),
+      ],
+    }),
+  },
+];
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  // The client decides when to activate the new worker — we don't skip
-  // waiting automatically. The update toast in the UI calls SKIP_WAITING
-  // explicitly when the user clicks "Update".
+  // The client decides when to activate the new worker — see PwaUpdater.
   skipWaiting: false,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
-  // Never serve a stale shell for the BFF: route resolution must hit
-  // network so users always see the latest cache state on the server.
-  fallbacks: {
-    entries: [],
-  },
+  // API rules first (more specific) → Serwist defaults (static assets,
+  // navigation, third-party fonts/images) as the fallback.
+  runtimeCaching: [...apiCaching, ...defaultCache],
+  fallbacks: { entries: [] },
 });
 
-// Allow the app to ask the waiting worker to activate immediately when the
-// user clicks "Update" on the new-version toast.
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     void self.skipWaiting();
