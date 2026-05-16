@@ -542,17 +542,31 @@ body {
 }
 
 /* ============ Preview / Export ============ */
-.export-panel { padding: 22px 24px; max-width: 720px; margin: 0 auto; width: 100%; }
+.export-panel {
+  padding: 22px 24px; max-width: 720px; margin: 0 auto; width: 100%;
+  min-width: 0;
+}
+@media (max-width: 600px) { .export-panel { padding: 16px 16px 24px; } }
 .preview-route {
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: 16px; background: var(--surface);
 }
 .qr-wrap {
-  display: grid; grid-template-columns: auto 1fr; gap: 18px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px;
   align-items: center; padding: 18px;
   border: 1px solid var(--border); border-radius: var(--radius);
   margin-top: 14px;
   background: var(--surface);
+}
+/* On narrow phones the QR (144px) + 1fr content leaves the right column
+   too cramped for the URL field, so stack vertically. */
+@media (max-width: 600px) {
+  .qr-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+  .qr-wrap > .qr { justify-self: center; }
 }
 .qr {
   width: 144px; height: 144px;
@@ -560,6 +574,11 @@ body {
   border: 1px solid var(--border);
 }
 .qr svg { width: 100%; height: 100%; display: block; }
+/* Allow the URL input inside the QR card to shrink — without `min-width: 0`
+   on the flex item the input's intrinsic size forces overflow. */
+.qr-wrap .input { min-width: 0; }
+/* Action rows under the QR card wrap if the buttons don't fit on one line. */
+.qr-wrap .row { flex-wrap: wrap; }
 
 /* Drag state */
 .stop-card.dragging { opacity: 0.4; }
