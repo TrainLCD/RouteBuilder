@@ -234,6 +234,8 @@ body {
   padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--surface); color: var(--ink); font-weight: 500;
   font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background .12s, border-color .12s, transform .05s;
 }
 .btn:hover { background: var(--surface-2); }
