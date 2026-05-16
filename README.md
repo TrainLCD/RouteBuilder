@@ -65,12 +65,7 @@ Copy the example env and set the upstream GraphQL endpoint:
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-```
-# apps/web/.env.local
-TRAINLCD_GRAPHQL_ENDPOINT=
-```
-
-The frontend never reads this — only the BFF Route Handlers do. The browser only talks to relative `/api/trainlcd/*` paths.
+Then fill in `TRAINLCD_GRAPHQL_ENDPOINT` in `apps/web/.env.local` with the upstream URL. The frontend never reads this — only the BFF Route Handlers do. The browser only talks to relative `/api/trainlcd/*` paths.
 
 ### Run
 
