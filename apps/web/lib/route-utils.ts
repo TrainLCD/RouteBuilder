@@ -1,4 +1,4 @@
-import { getCachedStation } from './api/cache';
+import { getCachedLineOrder, getCachedStation } from './api/cache';
 import { validateRouteSync, type LineId, type Segment, type StationId } from './data';
 
 export type RouteSummary = {
@@ -34,6 +34,25 @@ export function summarizeRoute(stationIds: StationId[]): RouteSummary {
     ok: v.ok,
     segs: v.segments,
   };
+}
+
+/**
+ * True when every station row + every incident line ordering this route
+ * needs to render is already cached. Used by panels that should wait
+ * (skeleton) until they can render the final state in one shot, instead
+ * of flickering through partial states.
+ */
+export function isRouteDataReady(stationIds: StationId[]): boolean {
+  const lineIds = new Set<LineId>();
+  for (const id of stationIds) {
+    const s = getCachedStation(id);
+    if (!s) return false;
+    if (s.line?.id != null) lineIds.add(s.line.id);
+  }
+  for (const lid of lineIds) {
+    if (!getCachedLineOrder(lid)) return false;
+  }
+  return true;
 }
 
 /** Local case-insensitive name match used for filtering already-cached stations. */

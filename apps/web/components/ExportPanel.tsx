@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { getCachedLineOrder, getCachedStation } from '../lib/api/cache';
 import type { Route } from '../lib/data';
 import {
   directDeepLinkForRoute,
@@ -9,7 +8,7 @@ import {
 import { useDataStore } from '../lib/hooks/useDataStore';
 import { useRouteData } from '../lib/hooks/useRouteData';
 import type { Lang } from '../lib/i18n';
-import { summarizeRoute } from '../lib/route-utils';
+import { isRouteDataReady, summarizeRoute } from '../lib/route-utils';
 import { Icon } from './ui/Icon';
 import { LinePill } from './ui/LinePill';
 import { QR } from './ui/QR';
@@ -25,25 +24,6 @@ type LinkState =
   | { kind: 'loading' }
   | { kind: 'ready'; url: string }
   | { kind: 'error'; fallbackUrl: string | null };
-
-/**
- * True when every station row + every line ordering needed to render this
- * route is already in the in-memory cache. Used to decide between showing
- * a skeleton or the real panel — without it, the route summary, line
- * pills, and QR pop in at different times after open.
- */
-function isRouteDataReady(route: Route): boolean {
-  const lineIds = new Set<number>();
-  for (const id of route.stations) {
-    const s = getCachedStation(id);
-    if (!s) return false;
-    if (s.line?.id != null) lineIds.add(s.line.id);
-  }
-  for (const lid of lineIds) {
-    if (!getCachedLineOrder(lid)) return false;
-  }
-  return true;
-}
 
 export function ExportPanel({ route, lang, onClose }: Props) {
   useRouteData(route.stations);
@@ -96,7 +76,7 @@ export function ExportPanel({ route, lang, onClose }: Props) {
   }, [route, channel, useShortUrl]);
 
   const tooFewStations = route.stations.length < 2;
-  const dataReady = tooFewStations || isRouteDataReady(route);
+  const dataReady = tooFewStations || isRouteDataReady(route.stations);
   const linkResolved =
     linkState.kind === 'ready' ||
     linkState.kind === 'idle' ||
