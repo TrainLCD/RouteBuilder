@@ -32,14 +32,22 @@ export function ExportPanel({ route, lang, onClose }: Props) {
   const sum = summarizeRoute(route.stations);
   const [copied, setCopied] = useState(false);
   const [canary, setCanary] = useState(false);
+  const [useShortUrl, setUseShortUrl] = useState(false);
   const channel: DeepLinkChannel = canary ? 'canary' : 'prod';
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'idle' });
 
-  // Compute the short URL whenever the route or channel changes. Short URLs
-  // are content-addressed so re-exporting the same route returns the same id.
+  // Default to the direct sids= URL. The short-id= form is gated behind an
+  // opt-in checkbox because the receiving end of `?id=` is a separate spec
+  // (TrainLCD/MobileApp#6008) that costs real mobile-app work to support;
+  // until that lands, opting in produces a link the released app can't open.
   useEffect(() => {
     if (route.stations.length < 2) {
       setLinkState({ kind: 'idle' });
+      return;
+    }
+    if (!useShortUrl) {
+      const direct = directDeepLinkForRoute(route, channel);
+      setLinkState(direct ? { kind: 'ready', url: direct } : { kind: 'idle' });
       return;
     }
     const controller = new AbortController();
@@ -66,7 +74,7 @@ export function ExportPanel({ route, lang, onClose }: Props) {
       }
     })();
     return () => controller.abort();
-  }, [route, channel]);
+  }, [route, channel, useShortUrl]);
 
   const displayUrl =
     linkState.kind === 'ready'
@@ -153,6 +161,18 @@ export function ExportPanel({ route, lang, onClose }: Props) {
                   style={{ cursor: 'pointer' }}
                 />
                 <span>{lang === 'en' ? 'Canary release' : 'カナリアリリース用'}</span>
+              </label>
+              <label
+                className="row"
+                style={{ gap: 6, marginTop: 6, fontSize: 12, color: 'var(--ink-2)', cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={useShortUrl}
+                  onChange={(e) => setUseShortUrl(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span>{lang === 'en' ? 'Use short URL' : '短縮URLを使用する'}</span>
               </label>
               <div className="row" style={{ gap: 8, marginTop: 10 }}>
                 <a className="btn btn-primary" href={displayUrl}>
