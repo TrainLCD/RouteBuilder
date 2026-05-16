@@ -27,6 +27,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Lock the scale: this is an app-style UI and a stray pinch shouldn't
+  // resize the route timeline. iOS Safari ignores `userScalable: false`
+  // in regular browser tabs (accessibility), but respects it once the
+  // PWA is added to the home screen — which is the primary mobile use.
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#1d6cf2',
 };
