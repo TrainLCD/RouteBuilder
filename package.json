@@ -1,0 +1,13 @@
+{
+  "name": "route-builder",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web",
+    "start": "npm run start --workspace=web",
+    "typecheck": "npm run typecheck --workspace=web"
+  }
+}
