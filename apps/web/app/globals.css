@@ -668,3 +668,4 @@ button:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--a
   flex-shrink: 0;
 }
 .pwa-update-toast button:hover { filter: brightness(0.95); }
+.pwa-update-toast button:disabled { opacity: 0.7; cursor: progress; }
