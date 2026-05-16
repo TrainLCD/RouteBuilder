@@ -7,3 +7,8 @@ dist
 .env.*.local
 *.tsbuildinfo
 .turbo
+
+# Serwist build outputs (generated from app/sw.ts at build time)
+public/sw.js
+public/sw.js.map
+public/swe-worker-*.js

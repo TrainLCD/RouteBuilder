@@ -1,11 +1,34 @@
 import type { ReactNode } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { PwaUpdater } from '@/components/PwaUpdater';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Route Builder (Beta)',
   description: 'Build TrainLCD routes by chaining stations along connected lines. Beta release.',
-  icons: { icon: '/brand-icon.png' },
+  applicationName: 'Route Builder',
+  appleWebApp: {
+    capable: true,
+    title: 'Route Builder',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    icon: [
+      { url: '/brand-icon.png', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#1d6cf2',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -19,7 +42,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaUpdater />
+      </body>
     </html>
   );
 }
