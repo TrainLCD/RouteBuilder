@@ -59,11 +59,6 @@ export function ExportPanel({ route, lang, onClose }: Props) {
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
             {lang === 'en' ? 'Share this route' : 'このルートを共有'}
           </div>
-          <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
-            {lang === 'en'
-              ? 'TrainLCD opens at the starting station on the first line. The full custom route is approximated.'
-              : 'TrainLCDは最初の路線の出発駅で開きます。カスタムルート全体は近似表現です'}
-          </div>
           {link ? (
             <>
               <div className="row" style={{ gap: 6 }}>
