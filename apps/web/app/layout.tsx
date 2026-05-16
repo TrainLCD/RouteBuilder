@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Route Builder',
-  description: 'Build TrainLCD routes by chaining stations along connected lines.',
+  title: 'Route Builder (Beta)',
+  description: 'Build TrainLCD routes by chaining stations along connected lines. Beta release.',
   icons: { icon: '/brand-icon.png' },
 };
 

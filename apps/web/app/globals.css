@@ -108,6 +108,24 @@ body {
   text-transform: uppercase; letter-spacing: 0.10em;
   font-family: 'JetBrains Mono', monospace;
 }
+
+/* BETA badge — visible but understated, accent-colored so it reads as a
+   live "this is provisional" flag rather than a warning. */
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  margin-left: 8px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  font-family: 'JetBrains Mono', monospace;
+  vertical-align: middle;
+  line-height: 1.5;
+}
 .rail-section {
   padding: 14px 14px;
   border-bottom: 1px solid var(--border);

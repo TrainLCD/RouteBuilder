@@ -231,7 +231,10 @@ export function App() {
             <img src="/brand-icon.png" alt="" />
           </div>
           <div>
-            <div>Route Builder</div>
+            <div>
+              Route Builder
+              <span className="beta-badge" aria-label="Beta release">BETA</span>
+            </div>
             <div className="brand-sub">FOR TRAINLCD</div>
           </div>
         </div>
@@ -299,6 +302,7 @@ export function App() {
           <div className="brand-logo mobile-only" style={{ width: 26, height: 32 }}>
             <img src="/brand-icon.png" alt="" />
           </div>
+          <span className="beta-badge mobile-only">BETA</span>
           <div className="grow">
             <div className="title">{lang === 'en' ? 'My routes' : 'マイルート'}</div>
             <div className="sub">
