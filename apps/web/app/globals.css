@@ -627,17 +627,20 @@ button:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--a
 
 /* PWA update toast — distinct from the regular .toast so a new-version
    prompt reads as actionable rather than transient. Pinned above the
-   mobile bottom nav and visible without dismissing other UI. */
+   mobile bottom nav, spans the viewport up to 480px so the message
+   stays on one line on most phones. */
 .pwa-update-toast {
   position: fixed;
-  left: 50%;
+  left: 16px;
+  right: 16px;
   bottom: calc(88px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  margin: 0 auto;
+  max-width: 480px;
   z-index: 300;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px 10px 18px;
+  padding: 10px 12px 10px 18px;
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-fg);
@@ -646,6 +649,7 @@ button:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--a
   box-shadow: var(--shadow-2);
   animation: toast-in .18s ease-out;
 }
+.pwa-update-toast > span { flex: 1; min-width: 0; }
 @media (min-width: 920px) {
   .pwa-update-toast { bottom: 40px; }
 }
