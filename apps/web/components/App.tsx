@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCachedLine } from '../lib/api/cache';
 import type { StationId } from '../lib/api/types';
-import {
-  connectingLineSync, ensureAdjacency, shortestPath,
-  type Route,
-} from '../lib/data';
+import type { Route } from '../lib/data';
 import { buildSampleRoutes } from '../lib/data/sample-routes';
 import { stationLabel } from '../lib/i18n';
 import { summarizeRoute } from '../lib/route-utils';
@@ -19,12 +16,14 @@ import { MyRoutes } from './MyRoutes';
 import { Builder, type SearchPayload } from './Builder';
 import { ExportPanel } from './ExportPanel';
 import { SearchSheet, type PickOptions } from './SearchSheet';
-import { NLSheet, type NLResult } from './NLSheet';
 import { RouteColorPicker } from './RouteColorPicker';
 import { TweakButton, TweakRadio, TweakSection, TweaksPanel } from './TweaksPanel';
 
+// NOTE: AI route generation (NLSheet + lib/ai.ts) is wired but the entry
+// points are hidden until the feature ships. To re-enable, restore the
+// imports / entry buttons below — see git history for the prior shape.
+
 type View = 'routes' | 'builder' | 'export';
-type NLMode = 'create' | 'add' | null;
 
 type Toast = { id: string; msg: string };
 
@@ -76,7 +75,6 @@ export function App() {
 
   const [view, setView] = useState<View>('routes');
   const [search, setSearch] = useState<SearchPayload | null>(null);
-  const [nlMode, setNlMode] = useState<NLMode>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useAllRoutesData(routes.map((r) => r.stations));
@@ -189,47 +187,6 @@ export function App() {
     setSearch(null);
   };
 
-  const applyNL = async (suggested: NLResult) => {
-    if (nlMode === 'create' || !activeRoute) {
-      const id = 'r-' + Math.random().toString(36).slice(2, 8);
-      const fresh: Route = {
-        id,
-        name: suggested.name || (lang === 'en' ? 'AI Route' : 'AIルート'),
-        stations: suggested.stations,
-        updated: todayIso(),
-      };
-      setRoutes((rs) => [fresh, ...rs]);
-      setActiveId(id);
-      setView('builder');
-    } else {
-      const existing = activeRoute.stations;
-      let appendage = suggested.stations || [];
-      if (existing.length > 0 && appendage.length > 0) {
-        const last = existing[existing.length - 1];
-        if (appendage[0] === last) {
-          appendage = appendage.slice(1);
-        } else {
-          await ensureAdjacency([last, appendage[0]]);
-          if (!connectingLineSync(last, appendage[0])) {
-            const bridge = await shortestPath(last, appendage[0]);
-            if (bridge) appendage = [...bridge.slice(1, -1), ...appendage];
-          }
-        }
-      }
-      const merged = [...existing, ...appendage].filter((s, i, a) => i === 0 || a[i - 1] !== s);
-      const added = merged.length - existing.length;
-      updateRoute({ ...activeRoute, stations: merged });
-      if (added > 0) {
-        pushToast(
-          lang === 'en'
-            ? `Added ${added} stop${added === 1 ? '' : 's'} to the route.`
-            : `${added}駅をルートに追加しました`,
-        );
-      }
-    }
-    setNlMode(null);
-  };
-
   const reverseRoute = () => {
     if (!activeRoute) return;
     updateRoute({ ...activeRoute, stations: [...activeRoute.stations].reverse() });
@@ -258,10 +215,6 @@ export function App() {
         >
           <span className="ricon"><Icon name="routes" /></span>
           <span>{lang === 'en' ? 'My routes' : 'マイルート'}</span>
-        </div>
-        <div className="rail-item" onClick={() => setNlMode('create')}>
-          <span className="ricon"><Icon name="sparkle" /></span>
-          <span>{lang === 'en' ? 'Create with AI' : 'AIで新規作成'}</span>
         </div>
       </div>
       <div className="rail-section" style={{ flex: 1, overflow: 'auto' }}>
@@ -328,9 +281,6 @@ export function App() {
               : `保存済みルート ${routes.length} 件`}
           </div>
         </div>
-        <button className="btn btn-ghost" onClick={() => setNlMode('create')}>
-          <Icon name="sparkle" />AI
-        </button>
         <button className="btn btn-primary" onClick={newRoute}>
           <Icon name="plus" />{lang === 'en' ? 'New' : '新規'}
         </button>
@@ -380,13 +330,6 @@ export function App() {
         <button className="iconbtn" title={lang === 'en' ? 'Reverse' : '反転'} onClick={reverseRoute}>
           <Icon name="swap" />
         </button>
-        <button
-          className="iconbtn"
-          title={lang === 'en' ? 'Add with AI' : 'AIで追加'}
-          onClick={() => setNlMode('add')}
-        >
-          <Icon name="sparkle" />
-        </button>
         <button className="btn btn-primary btn-sm" onClick={() => setView('export')}>
           <Icon name="export" />{lang === 'en' ? 'Export' : 'エクスポート'}
         </button>
@@ -425,10 +368,6 @@ export function App() {
         <span className="nav-icon"><Icon name="builder" /></span>
         <span>{lang === 'en' ? 'Builder' : 'ビルダー'}</span>
       </button>
-      <button onClick={() => setNlMode(activeRoute && activeRoute.stations.length > 0 ? 'add' : 'create')}>
-        <span className="nav-icon"><Icon name="sparkle" /></span>
-        <span>AI</span>
-      </button>
       <button
         className={view === 'export' && activeRoute ? 'active' : ''}
         onClick={() => { if (activeRoute) setView('export'); }}
@@ -465,19 +404,6 @@ export function App() {
             : lang === 'en' ? 'Add station' : '駅を追加'
         }
       />
-      <NLSheet
-        open={!!nlMode}
-        mode={nlMode || 'add'}
-        anchor={
-          nlMode === 'add' && activeRoute && activeRoute.stations.length > 0
-            ? activeRoute.stations[activeRoute.stations.length - 1]
-            : null
-        }
-        onClose={() => setNlMode(null)}
-        onApply={(r) => void applyNL(r)}
-        lang={lang}
-      />
-
       <TweaksPanel title="Tweaks">
         <TweakSection title={lang === 'en' ? 'Appearance' : '見た目'}>
           <TweakRadio
@@ -519,10 +445,6 @@ export function App() {
                 setView('routes');
               })();
             }}
-          />
-          <TweakButton
-            label={lang === 'en' ? 'Try AI create' : 'AIで新規作成を試す'}
-            onClick={() => setNlMode('create')}
           />
         </TweakSection>
       </TweaksPanel>
