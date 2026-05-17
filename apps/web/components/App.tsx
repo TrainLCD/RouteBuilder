@@ -380,6 +380,11 @@ export function App() {
 
   return (
     <>
+      <div className="tester-notice" role="status">
+        {lang === 'en'
+          ? 'Right now only TrainLCD canary release testers can use all features.'
+          : '現在TrainLCD カナリアリリースのテスターのみすべての機能をご利用いただけます。'}
+      </div>
       <div id="app">
         {Rail}
         <main className="main">

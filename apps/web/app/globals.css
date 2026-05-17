@@ -52,6 +52,23 @@ body {
 }
 .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: "tnum"; }
 
+/* Persistent tester-only notice. Sticky at the top of the viewport so it
+   stays visible on every view, including while scrolling long timelines.
+   Sits above the centered app card on desktop and above the full-bleed
+   main on mobile. */
+.tester-notice {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 8px 16px;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  border-bottom: 1px solid oklch(from var(--warn-fg) l c h / 0.25);
+}
+
 /* ============ App frame ============ */
 #app {
   min-height: 100vh;
