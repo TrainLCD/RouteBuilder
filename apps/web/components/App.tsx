@@ -452,6 +452,17 @@ export function App() {
             }}
           />
         </TweakSection>
+        <TweakSection title={lang === 'en' ? 'About' : 'プロジェクトについて'}>
+          <a
+            className="btn btn-sm"
+            href="https://github.com/TrainLCD/RouteBuilder"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ width: '100%', justifyContent: 'flex-start' }}
+          >
+            <Icon name="link" />GitHub
+          </a>
+        </TweakSection>
       </TweaksPanel>
 
       {toasts.length > 0 && (
