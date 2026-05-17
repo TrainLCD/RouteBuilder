@@ -1,25 +1,34 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /** Periodic background check for new SW (30 min while the tab is open). */
 const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
-/** Fallback hard-reload delay if `controllerchange` doesn't fire after
- *  SKIP_WAITING (some browsers + edge cases). */
-const RELOAD_FALLBACK_MS = 1500;
+/** Generous fallback for when `controllerchange` never fires. The cost of
+ *  reloading too early is bad: it can pick up the old SW as controller
+ *  before activation completes and re-trigger the update prompt in a loop.
+ *  10s is well beyond a normal SW activation. */
+const RELOAD_FALLBACK_MS = 10_000;
 
 /**
  * Registers `/sw.js`, watches for new SW installs, and renders a toast
  * with an "Update" button when a new version is waiting to activate.
  * Clicking Update posts SKIP_WAITING to the waiting worker, which takes
  * control and triggers a `controllerchange` event — we then reload so
- * the new JS/CSS is what's running. A safety-net timeout reloads even
- * if controllerchange never fires.
+ * the new JS/CSS is what's running.
  */
 export function PwaUpdater() {
   const [waitingSw, setWaitingSw] = useState<ServiceWorker | null>(null);
   const [applying, setApplying] = useState(false);
+  /**
+   * Gates the `controllerchange` reload to user-initiated updates only.
+   * On the very first SW install (no previous controller), Serwist's
+   * `clientsClaim: true` also fires `controllerchange` — without this
+   * gate we would reload on that initial install too, which is jarring
+   * and unnecessary.
+   */
+  const updateRequestedRef = useRef(false);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -55,6 +64,7 @@ export function PwaUpdater() {
     let refreshing = false;
     const onControllerChange = () => {
       if (refreshing) return;
+      if (!updateRequestedRef.current) return;
       refreshing = true;
       window.location.reload();
     };
@@ -80,11 +90,11 @@ export function PwaUpdater() {
   const applyUpdate = async () => {
     if (applying) return;
     setApplying(true);
+    updateRequestedRef.current = true;
 
-    // The cached `waitingSw` can in rare cases be a stale reference (the
-    // worker transitioned between when statechange fired and when the
-    // user clicked). Re-query the registration so we always post to the
-    // currently-waiting worker.
+    // Re-query the registration so we always post to the currently-waiting
+    // worker, in case the cached `waitingSw` ref went stale between
+    // statechange firing and the click.
     let target: ServiceWorker | null = waitingSw;
     try {
       const reg = await navigator.serviceWorker.getRegistration();
@@ -94,10 +104,10 @@ export function PwaUpdater() {
     }
     target?.postMessage({ type: 'SKIP_WAITING' });
 
-    // controllerchange should fire and trigger a reload once the new SW
-    // claims this client. If it doesn't (some browsers / non-controlled
-    // edge cases) reload anyway — the new SW will be active on the next
-    // load regardless.
+    // Safety net: if `controllerchange` doesn't fire after activation
+    // (browser quirk / non-controlled edge case), reload anyway. The
+    // window is generous so we don't reload during activation and risk
+    // attaching to the old SW.
     window.setTimeout(() => window.location.reload(), RELOAD_FALLBACK_MS);
   };
 
