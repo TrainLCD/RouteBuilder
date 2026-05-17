@@ -23,7 +23,7 @@ const PATHS: Record<IconName, ReactElement> = {
   qr:      <><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></>,
   play:    <><path d="M6 4l14 8-14 8z"/></>,
   sparkle: <><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2"/></>,
-  chevron: <><path d="m9 6 6 6-6 6"/></>,
+  chevron: <><path d="m15 6-6 6 6 6"/></>,
   arrow:   <><path d="M5 12h14M13 5l7 7-7 7"/></>,
   check:   <><path d="m4 12 5 5L20 6"/></>,
   warn:    <><path d="M12 3 2 21h20zM12 10v5M12 18h.01" strokeWidth="2"/></>,
