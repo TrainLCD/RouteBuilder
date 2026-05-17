@@ -46,7 +46,14 @@ export type RouteTrainType = {
   name: string;
   /** #RRGGBB の小文字 6 桁 hex. */
   color: string;
+  /** Romaji form for the LCD's secondary line. Currently a placeholder
+   *  ("Local") for every route — TrainLCD UI typically expects something
+   *  here even if the primary `name` is the user's Japanese label. */
+  nameRoman?: string;
 };
+
+/** Placeholder English/romaji label until the UI lets the user set it. */
+const PLACEHOLDER_NAME_ROMAN = 'Local';
 
 export type TrainLcdDeepLinkParams = {
   sids?: StationId[];
@@ -80,13 +87,13 @@ export function trainTypeForRoute(route: Route): RouteTrainType | undefined {
   const name = route.name?.trim();
   if (!name) return undefined;
   const explicit = normalizeHexColor(route.color);
-  if (explicit) return { name, color: explicit };
+  if (explicit) return { name, color: explicit, nameRoman: PLACEHOLDER_NAME_ROMAN };
   const sum = summarizeRoute(route.stations);
   const firstLineId = sum.lines[0];
   if (firstLineId != null) {
     const line = getCachedLine(firstLineId);
     const derived = normalizeHexColor(line?.color);
-    if (derived) return { name, color: derived };
+    if (derived) return { name, color: derived, nameRoman: PLACEHOLDER_NAME_ROMAN };
   }
   return undefined;
 }
@@ -107,6 +114,9 @@ export function buildDeepLink(
   if (params.trainType) {
     qs.set('ttname', params.trainType.name);
     qs.set('ttcolor', params.trainType.color);
+    if (params.trainType.nameRoman) {
+      qs.set('ttnameroman', params.trainType.nameRoman);
+    }
   }
   if (params.auto) qs.set('auto', '1');
   if (params.theme) qs.set('theme', params.theme);

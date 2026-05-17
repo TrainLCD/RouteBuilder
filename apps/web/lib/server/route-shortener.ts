@@ -25,6 +25,8 @@ export type RouteTrainType = {
   name: string;
   /** #RRGGBB の 6 桁 hex (小文字)。 */
   color: string;
+  /** Romaji form for the LCD's secondary line. Optional. */
+  nameRoman?: string;
 };
 
 export type RouteRecord = {
@@ -36,7 +38,7 @@ export type RouteRecord = {
 };
 
 function codeFor(sids: number[], skips: number[], tt?: RouteTrainType): string {
-  const ttKey = tt ? `${tt.name}|${tt.color}` : '';
+  const ttKey = tt ? `${tt.name}|${tt.color}|${tt.nameRoman ?? ''}` : '';
   const digest = createHash('sha256')
     .update(`${sids.join(',')}|${skips.join(',')}|${ttKey}`)
     .digest();
@@ -107,7 +109,18 @@ export function validateTrainType(input: unknown): RouteTrainType | undefined {
   if (typeof rawColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(rawColor)) {
     throw new Error('trainType.color must be #RRGGBB');
   }
-  return { name, color: rawColor.toLowerCase() };
+  let nameRoman: string | undefined;
+  if (obj.nameRoman !== undefined) {
+    if (typeof obj.nameRoman !== 'string') {
+      throw new Error('trainType.nameRoman must be a string');
+    }
+    const trimmed = obj.nameRoman.trim();
+    if (trimmed.length > MAX_TRAIN_TYPE_NAME) {
+      throw new Error(`trainType.nameRoman exceeds ${MAX_TRAIN_TYPE_NAME} chars`);
+    }
+    if (trimmed.length > 0) nameRoman = trimmed;
+  }
+  return { name, color: rawColor.toLowerCase(), ...(nameRoman ? { nameRoman } : {}) };
 }
 
 /** Store the route under its content hash and return the short id. */
