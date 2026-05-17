@@ -3,6 +3,7 @@ import {
   normaliseSkips,
   shortenRoute,
   validateSids,
+  validateTrainType,
 } from '@/lib/server/route-shortener';
 
 export const runtime = 'nodejs';
@@ -31,8 +32,18 @@ export async function POST(req: NextRequest) {
 
   const skips = normaliseSkips((body as { skips?: unknown }).skips, sids.length);
 
+  let trainType;
   try {
-    const id = await shortenRoute(sids, skips);
+    trainType = validateTrainType((body as { trainType?: unknown }).trainType);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'invalid trainType' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const id = await shortenRoute(sids, skips, trainType);
     return NextResponse.json({ id });
   } catch (err) {
     console.error('[/api/routes] failed to store route:', err);

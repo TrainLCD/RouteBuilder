@@ -1,23 +1,29 @@
+import { getCachedLine } from './api/cache';
 import type { StationId } from './api/types';
 import type { Route } from './data';
+import { summarizeRoute } from './route-utils';
 
 /**
  * TrainLCD deep link spec.
  *
- * Two link formats are produced by this app:
+ * Three families of parameters:
  *
- *   1. trainlcd://route?sids=<sid1>,<sid2>,...[&skips=<i,j,...>]
- *      Direct embedded route. Order is direction (sids[0] → sids[last]).
- *      `skips` is a 0-origin index list of stations to treat as 通過
- *      (TrainLCD/MobileApp#6005 案A). Spec: TrainLCD/MobileApp#6002.
+ * - Route encoding (one of):
+ *     1. trainlcd://route?sids=<sid1>,<sid2>,...[&skips=<i,j,...>]
+ *        Direct embedded route. Order is direction (sids[0] → sids[last]).
+ *        `skips` is a 0-origin index list of stations to treat as 通過
+ *        (TrainLCD/MobileApp#6005 案A). Spec: TrainLCD/MobileApp#6002.
+ *     2. trainlcd://route?id=<short-id>
+ *        Server-shortened reference. The receiver resolves `id` against
+ *        the Route Builder backend (`GET /api/routes/<id>` →
+ *        `{ sids, skips?, trainType? }`) and proceeds as if the
+ *        resolved fields were embedded directly.
  *
- *   2. trainlcd://route?id=<short-id>
- *      Server-shortened reference. The receiver resolves `id` against
- *      the Route Builder backend (`GET /api/routes/<id>` →
- *      `{ sids, skips? }`) and proceeds as if the resolved sids/skips
- *      were embedded directly. This is the form we use whenever the
- *      user opts into "Use short URL" so QR codes stay scannable on
- *      long routes.
+ * - Custom train type (TrainLCD/MobileApp#6018), used to surface the
+ *   user's route name + accent color as the LCD's 列車種別 display:
+ *     ttname (required), ttcolor (required, #RRGGBB).
+ *   For `?id=` form the same data is persisted server-side instead of
+ *   appearing in the URL.
  *
  * Schemes:
  *   - production: `trainlcd://`
@@ -34,15 +40,56 @@ export function schemeFor(channel: DeepLinkChannel): string {
   return channel === 'canary' ? CANARY_SCHEME : PROD_SCHEME;
 }
 
+/** Subset of TrainLCD's `TrainType` that we set from this app. */
+export type RouteTrainType = {
+  /** 列車種別の表示名 (e.g. "週末さんぽ"). Non-empty. */
+  name: string;
+  /** #RRGGBB の小文字 6 桁 hex. */
+  color: string;
+};
+
 export type TrainLcdDeepLinkParams = {
   sids?: StationId[];
   /** 0-origin indices into `sids` to treat as 通過. */
   skips?: number[];
   /** Short id from `POST /api/routes`. Mutually exclusive with `sids`. */
   id?: string;
+  /** Custom 列車種別 to override the head-station-derived one. */
+  trainType?: RouteTrainType;
   auto?: boolean;
   theme?: string;
 };
+
+/** Lowercase #RRGGBB or null if the input doesn't match. */
+export function normalizeHexColor(c: string | null | undefined): string | null {
+  if (typeof c !== 'string') return null;
+  const m = c.trim().match(/^#([0-9a-fA-F]{6})$/);
+  return m ? `#${m[1].toLowerCase()}` : null;
+}
+
+/**
+ * Project a Route into a TrainLCD train-type record. The name comes from
+ * the user-editable route name. The color is the user's explicit
+ * `route.color` if set, otherwise the first segment's line color so the
+ * LCD reads with the same hue the rest of the app shows. Returns
+ * `undefined` if neither name nor a valid color can be resolved — the
+ * spec rejects partial train-type data, so we either send both fields
+ * or none.
+ */
+export function trainTypeForRoute(route: Route): RouteTrainType | undefined {
+  const name = route.name?.trim();
+  if (!name) return undefined;
+  const explicit = normalizeHexColor(route.color);
+  if (explicit) return { name, color: explicit };
+  const sum = summarizeRoute(route.stations);
+  const firstLineId = sum.lines[0];
+  if (firstLineId != null) {
+    const line = getCachedLine(firstLineId);
+    const derived = normalizeHexColor(line?.color);
+    if (derived) return { name, color: derived };
+  }
+  return undefined;
+}
 
 export function buildDeepLink(
   params: TrainLcdDeepLinkParams,
@@ -57,17 +104,15 @@ export function buildDeepLink(
       qs.set('skips', params.skips.join(','));
     }
   }
+  if (params.trainType) {
+    qs.set('ttname', params.trainType.name);
+    qs.set('ttcolor', params.trainType.color);
+  }
   if (params.auto) qs.set('auto', '1');
   if (params.theme) qs.set('theme', params.theme);
   return `${scheme}://${HOST_PATH}?${qs.toString()}`;
 }
 
-/**
- * Project a Route's `passing` (set of station ids) onto the `skips`
- * index list expected by TrainLCD/MobileApp#6005 案A. The first and
- * last stops are always treated as stops regardless of marking, so they
- * never appear in the returned indices.
- */
 export function skipsForRoute(route: Route): number[] {
   if (!route.passing || route.passing.length === 0) return [];
   const set = new Set(route.passing);
@@ -78,27 +123,23 @@ export function skipsForRoute(route: Route): number[] {
   return skips;
 }
 
-/**
- * Direct (un-shortened) deep link with sids embedded. Useful for tests
- * and as a fallback when the short-URL endpoint is unreachable.
- */
 export function directDeepLinkForRoute(
   route: Route,
   channel: DeepLinkChannel = 'prod',
 ): string | null {
   if (route.stations.length < 2) return null;
   const skips = skipsForRoute(route);
+  const trainType = trainTypeForRoute(route);
   return buildDeepLink(
-    { sids: route.stations, skips: skips.length > 0 ? skips : undefined },
+    {
+      sids: route.stations,
+      skips: skips.length > 0 ? skips : undefined,
+      trainType,
+    },
     schemeFor(channel),
   );
 }
 
-/**
- * POST the route's sids (+skips) to our backend and return a short
- * `trainlcd://route?id=<code>` deep link. Resolves to `null` if the
- * route has fewer than two stops or if the backend rejects the request.
- */
 export async function shortDeepLinkForRoute(
   route: Route,
   channel: DeepLinkChannel = 'prod',
@@ -106,9 +147,11 @@ export async function shortDeepLinkForRoute(
 ): Promise<string | null> {
   if (route.stations.length < 2) return null;
   const skips = skipsForRoute(route);
+  const trainType = trainTypeForRoute(route);
   const body = JSON.stringify({
     sids: route.stations,
     ...(skips.length > 0 ? { skips } : {}),
+    ...(trainType ? { trainType } : {}),
   });
   const res = await fetch('/api/routes', {
     method: 'POST',

@@ -35,13 +35,24 @@ export function ExportPanel({ route, lang, onClose }: Props) {
   const channel: DeepLinkChannel = canary ? 'canary' : 'prod';
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'idle' });
 
+  const tooFewStations = route.stations.length < 2;
+  const dataReady = tooFewStations || isRouteDataReady(route.stations);
+
   // Default to the direct sids= URL. The short-id= form is gated behind an
   // opt-in checkbox because the receiving end of `?id=` is a separate spec
   // (TrainLCD/MobileApp#6008) that costs real mobile-app work to support;
   // until that lands, opting in produces a link the released app can't open.
+  //
+  // Gated on `dataReady` because the train-type color (ttcolor /
+  // server-stored color) falls back to the first segment's line color when
+  // the user hasn't picked one — we want that lookup to hit a warm cache.
   useEffect(() => {
     if (route.stations.length < 2) {
       setLinkState({ kind: 'idle' });
+      return;
+    }
+    if (!dataReady) {
+      setLinkState({ kind: 'loading' });
       return;
     }
     if (!useShortUrl) {
@@ -73,10 +84,8 @@ export function ExportPanel({ route, lang, onClose }: Props) {
       }
     })();
     return () => controller.abort();
-  }, [route, channel, useShortUrl]);
+  }, [route, channel, useShortUrl, dataReady]);
 
-  const tooFewStations = route.stations.length < 2;
-  const dataReady = tooFewStations || isRouteDataReady(route.stations);
   const linkResolved =
     linkState.kind === 'ready' ||
     linkState.kind === 'idle' ||
