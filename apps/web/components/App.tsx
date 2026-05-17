@@ -293,7 +293,7 @@ export function App() {
           <Icon name="chevron" size={18} />
         </button>
         <div className="grow">
-          <div className="title">{lang === 'en' ? 'Export & share' : 'エクスポート'}</div>
+          <div className="title">{lang === 'en' ? 'Open in app' : 'アプリを開く'}</div>
           <div className="sub crumb">{activeRoute.name}</div>
         </div>
       </div>
@@ -331,7 +331,7 @@ export function App() {
           <Icon name="swap" />
         </button>
         <button className="btn btn-primary btn-sm" onClick={() => setView('export')}>
-          <Icon name="export" />{lang === 'en' ? 'Export' : 'エクスポート'}
+          <Icon name="export" />{lang === 'en' ? 'Open in app' : 'アプリを開く'}
         </button>
       </div>
     );
