@@ -30,7 +30,12 @@ export function ExportPanel({ route, lang, onClose }: Props) {
   useDataStore();
 
   const [copied, setCopied] = useState(false);
-  const [canary, setCanary] = useState(false);
+  // Default to canary: the new deep-link parameters (sids/skips/trainType)
+  // only land in the canary build for now. Production users of TrainLCD
+  // can't actually open a `trainlcd://` link this app generates yet, so
+  // the canary scheme is the more useful default. Flip back when the
+  // features ship in production.
+  const [canary, setCanary] = useState(true);
   const [useShortUrl, setUseShortUrl] = useState(false);
   const channel: DeepLinkChannel = canary ? 'canary' : 'prod';
   const [linkState, setLinkState] = useState<LinkState>({ kind: 'idle' });
