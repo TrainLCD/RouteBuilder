@@ -295,46 +295,50 @@ export function App() {
     </aside>
   );
 
-  const Topbar = () => {
-    if (view === 'routes' || !activeRoute) {
-      return (
-        <div className="topbar">
-          <div className="brand-logo mobile-only" style={{ width: 26, height: 32 }}>
-            <img src="/brand-icon.png" alt="" />
-          </div>
-          <span className="beta-badge mobile-only">BETA</span>
-          <div className="grow">
-            <div className="title">{lang === 'en' ? 'My routes' : 'マイルート'}</div>
-            <div className="sub">
-              {lang === 'en'
-                ? `${routes.length} saved route${routes.length === 1 ? '' : 's'}`
-                : `保存済みルート ${routes.length} 件`}
-            </div>
-          </div>
-          <button className="btn btn-ghost" onClick={() => setNlMode('create')}>
-            <Icon name="sparkle" />AI
-          </button>
-          <button className="btn btn-primary" onClick={newRoute}>
-            <Icon name="plus" />{lang === 'en' ? 'New' : '新規'}
-          </button>
+  // NOTE: these are JSX *values*, not nested components.
+  //   `const X = () => ...` + `<X />` makes React see a new component
+  //   identity on every parent render, which unmounts the subtree (and
+  //   blurs any focused input inside) on every keystroke. Storing them as
+  //   JSX values keeps the element identity stable across re-renders.
+  let topbar: React.ReactNode;
+  if (view === 'routes' || !activeRoute) {
+    topbar = (
+      <div className="topbar">
+        <div className="brand-logo mobile-only" style={{ width: 26, height: 32 }}>
+          <img src="/brand-icon.png" alt="" />
         </div>
-      );
-    }
-    if (view === 'export') {
-      return (
-        <div className="topbar">
-          <button className="iconbtn" onClick={() => setView('builder')}>
-            <Icon name="chevron" size={18} />
-          </button>
-          <div className="grow">
-            <div className="title">{lang === 'en' ? 'Export & share' : 'エクスポート'}</div>
-            <div className="sub crumb">{activeRoute.name}</div>
+        <span className="beta-badge mobile-only">BETA</span>
+        <div className="grow">
+          <div className="title">{lang === 'en' ? 'My routes' : 'マイルート'}</div>
+          <div className="sub">
+            {lang === 'en'
+              ? `${routes.length} saved route${routes.length === 1 ? '' : 's'}`
+              : `保存済みルート ${routes.length} 件`}
           </div>
         </div>
-      );
-    }
+        <button className="btn btn-ghost" onClick={() => setNlMode('create')}>
+          <Icon name="sparkle" />AI
+        </button>
+        <button className="btn btn-primary" onClick={newRoute}>
+          <Icon name="plus" />{lang === 'en' ? 'New' : '新規'}
+        </button>
+      </div>
+    );
+  } else if (view === 'export') {
+    topbar = (
+      <div className="topbar">
+        <button className="iconbtn" onClick={() => setView('builder')}>
+          <Icon name="chevron" size={18} />
+        </button>
+        <div className="grow">
+          <div className="title">{lang === 'en' ? 'Export & share' : 'エクスポート'}</div>
+          <div className="sub crumb">{activeRoute.name}</div>
+        </div>
+      </div>
+    );
+  } else {
     const sum = summarizeRoute(activeRoute.stations);
-    return (
+    topbar = (
       <div className="topbar">
         <button
           className="iconbtn"
@@ -369,16 +373,15 @@ export function App() {
         </button>
       </div>
     );
-  };
+  }
 
-  const Body = () => {
-    if (view === 'routes' || !activeRoute) {
-      return <MyRoutes routes={routes} lang={lang} onOpen={openRoute} onNew={newRoute} onDelete={deleteRoute} />;
-    }
-    if (view === 'export') {
-      return <ExportPanel route={activeRoute} lang={lang} onClose={() => setView('builder')} />;
-    }
-    return (
+  let body: React.ReactNode;
+  if (view === 'routes' || !activeRoute) {
+    body = <MyRoutes routes={routes} lang={lang} onOpen={openRoute} onNew={newRoute} onDelete={deleteRoute} />;
+  } else if (view === 'export') {
+    body = <ExportPanel route={activeRoute} lang={lang} onClose={() => setView('builder')} />;
+  } else {
+    body = (
       <Builder
         route={activeRoute}
         onChange={updateRoute}
@@ -388,7 +391,7 @@ export function App() {
         onToast={pushToast}
       />
     );
-  };
+  }
 
   const BotNav = (
     <nav className="botnav">
@@ -422,9 +425,9 @@ export function App() {
       <div id="app">
         {Rail}
         <main className="main">
-          <Topbar />
+          {topbar}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <Body />
+            {body}
           </div>
           {BotNav}
         </main>
