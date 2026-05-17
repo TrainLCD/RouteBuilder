@@ -59,7 +59,7 @@ type CardProps = {
 function RouteCard({ route, lang, onOpen, onDelete }: CardProps) {
   const sum = summarizeRoute(route.stations);
   const accentLine = sum.lines[0] != null ? getCachedLine(sum.lines[0]) : undefined;
-  const accentColor = accentLine?.color ?? route.color ?? 'var(--accent)';
+  const accentColor = route.color ?? accentLine?.color ?? 'var(--accent)';
   return (
     <div
       className="route-card"

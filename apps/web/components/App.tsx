@@ -20,6 +20,7 @@ import { Builder, type SearchPayload } from './Builder';
 import { ExportPanel } from './ExportPanel';
 import { SearchSheet, type PickOptions } from './SearchSheet';
 import { NLSheet, type NLResult } from './NLSheet';
+import { RouteColorPicker } from './RouteColorPicker';
 import { TweakButton, TweakRadio, TweakSection, TweaksPanel } from './TweaksPanel';
 
 type View = 'routes' | 'builder' | 'export';
@@ -268,7 +269,7 @@ export function App() {
         {routes.map((r) => {
           const sum = summarizeRoute(r.stations);
           const accentLine = sum.lines[0] != null ? getCachedLine(sum.lines[0]) : undefined;
-          const swatchColor = accentLine?.color ?? 'var(--border-2)';
+          const swatchColor = r.color ?? accentLine?.color ?? 'var(--border-2)';
           return (
             <div
               key={r.id}
@@ -349,6 +350,7 @@ export function App() {
     );
   } else {
     const sum = summarizeRoute(activeRoute.stations);
+    const accentLine = sum.lines[0] != null ? getCachedLine(sum.lines[0]) : undefined;
     topbar = (
       <div className="topbar">
         <button
@@ -369,6 +371,12 @@ export function App() {
             {sum.lines.length} {lang === 'en' ? 'LINES' : '路線'}
           </div>
         </div>
+        <RouteColorPicker
+          value={activeRoute.color}
+          fallback={accentLine?.color ?? 'var(--accent)'}
+          onChange={(next) => updateRoute({ ...activeRoute, color: next })}
+          lang={lang}
+        />
         <button className="iconbtn" title={lang === 'en' ? 'Reverse' : '反転'} onClick={reverseRoute}>
           <Icon name="swap" />
         </button>
