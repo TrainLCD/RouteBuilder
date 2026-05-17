@@ -4,7 +4,7 @@ export type IconName =
   | 'plus' | 'minus' | 'search' | 'close' | 'x' | 'trash' | 'edit'
   | 'drag' | 'routes' | 'builder' | 'home' | 'nl' | 'export' | 'qr'
   | 'play' | 'sparkle' | 'chevron' | 'arrow' | 'check' | 'warn'
-  | 'save' | 'copy' | 'link' | 'swap' | 'sun' | 'moon';
+  | 'pass' | 'save' | 'copy' | 'link' | 'swap' | 'sun' | 'moon';
 
 const PATHS: Record<IconName, ReactElement> = {
   plus:    <><path d="M12 5v14M5 12h14"/></>,
@@ -25,6 +25,8 @@ const PATHS: Record<IconName, ReactElement> = {
   sparkle: <><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2"/></>,
   chevron: <><path d="m15 6-6 6 6 6"/></>,
   arrow:   <><path d="M5 12h14M13 5l7 7-7 7"/></>,
+  // Double-chevron, reads as "skip past" — used for the 通過 / 停車 toggle.
+  pass:    <><path d="m6 6 6 6-6 6M13 6l6 6-6 6"/></>,
   check:   <><path d="m4 12 5 5L20 6"/></>,
   warn:    <><path d="M12 3 2 21h20zM12 10v5M12 18h.01" strokeWidth="2"/></>,
   save:    <><path d="M5 4h12l3 3v13H5zM8 4v6h8V4M8 20v-6h8v6"/></>,

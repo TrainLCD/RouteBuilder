@@ -36,9 +36,17 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
 
   const stops = route.stations;
   const sum = summarizeRoute(stops);
+  const passingSet = new Set(route.passing ?? []);
   const [drag, setDrag] = useState<{ from: number } | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [dragInvalid, setDragInvalid] = useState(false);
+
+  const togglePassing = (sid: StationId) => {
+    const next = new Set(passingSet);
+    if (next.has(sid)) next.delete(sid);
+    else next.add(sid);
+    onChange({ ...route, passing: next.size > 0 ? [...next] : undefined });
+  };
 
   const wouldStayConnected = (next: StationId[]) => {
     if (next.length < 2) return true;
@@ -130,10 +138,14 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
                   ...stationLines.filter((l) => !priorityIds.has(l.id)),
                 ]
               : stationLines;
+            // 始発・終着は常に停車扱い。それ以外は ID ベースで通過判定。
+            const isPassing = !isStart && !isEnd && passingSet.has(sid);
             return (
               <Fragment key={`${i}_${sid}`}>
                 <div
                   className={`stop ${isStart ? 'start ' : ''}${isEnd ? 'end ' : ''}${
+                    isPassing ? 'pass ' : ''
+                  }${
                     dragOver === i ? (dragInvalid ? 'drop-invalid' : 'drop-target') : ''
                   }`}
                   draggable
@@ -156,7 +168,7 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
                   onDragEnd={() => { setDrag(null); setDragOver(null); setDragInvalid(false); }}
                 >
                   <div className="marker">
-                    {isStart ? <span>S</span> : isEnd ? <span>G</span> : <span className="inner" />}
+                    {isStart ? <span>S</span> : isEnd ? <span>G</span> : isPassing ? null : <span className="inner" />}
                   </div>
                   <div className={`stop-card ${drag && drag.from === i ? 'dragging' : ''}`}>
                     <div style={{ minWidth: 0 }}>
@@ -177,6 +189,20 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
                       )}
                     </div>
                     <div className="actions">
+                      {!isStart && !isEnd && (
+                        <button
+                          className={`iconbtn pass-toggle ${isPassing ? 'is-pass' : ''}`}
+                          title={
+                            lang === 'en'
+                              ? isPassing ? 'Mark as stop' : 'Mark as pass-through'
+                              : isPassing ? '停車にする' : '通過にする'
+                          }
+                          aria-pressed={isPassing}
+                          onClick={() => togglePassing(sid)}
+                        >
+                          <Icon name="pass" />
+                        </button>
+                      )}
                       <button
                         className="iconbtn"
                         title={lang === 'en' ? 'Replace' : '差し替え'}

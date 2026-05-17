@@ -45,7 +45,18 @@ function sanitizeRoutes(value: unknown): Route[] {
     const stations = (r as Route).stations;
     if (!Array.isArray(stations)) continue;
     if (!stations.every((s) => typeof s === 'number' && Number.isFinite(s))) continue;
-    out.push(r as Route);
+    // `passing` is optional. Keep only ids that are also in `stations`;
+    // anything malformed or empty: drop the field (treat as all-stop).
+    const rawPassing = (r as Route).passing;
+    let passing: number[] | undefined;
+    if (Array.isArray(rawPassing)) {
+      const stationSet = new Set(stations);
+      const cleaned = rawPassing.filter(
+        (s): s is number => typeof s === 'number' && Number.isFinite(s) && stationSet.has(s),
+      );
+      if (cleaned.length > 0) passing = cleaned;
+    }
+    out.push({ ...(r as Route), stations, passing });
   }
   return out;
 }

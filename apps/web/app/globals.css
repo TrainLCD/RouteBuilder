@@ -372,6 +372,27 @@ body {
   width: 8px; height: 8px; border-radius: 50%; background: var(--ink);
 }
 
+/* 通過扱い: marker is a smaller hollow ring, station card text dims. The
+   timeline rail keeps running through it so the route remains visually
+   continuous — only this stop is communicated as "the train rolls past". */
+.stop.pass .marker {
+  width: 16px; height: 16px;
+  border-width: 2px;
+  border-color: var(--ink-4);
+  background: var(--surface);
+}
+.stop.pass .stop-card .station-name { color: var(--ink-3); }
+.stop.pass .stop-card .station-name .en { color: var(--ink-4); }
+.stop.pass .stop-card { border-style: dashed; }
+
+/* Pass-through toggle button: subtle when off, accent-tinted when on. */
+.iconbtn.pass-toggle { color: var(--ink-3); }
+.iconbtn.pass-toggle.is-pass {
+  color: var(--accent);
+  background: oklch(from var(--accent) l c h / 0.12);
+  border-color: oklch(from var(--accent) l c h / 0.25);
+}
+
 .stop-card {
   flex: 1; min-width: 0;
   background: var(--surface); border: 1px solid var(--border);

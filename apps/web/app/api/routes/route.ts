@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { shortenRoute, validateSids } from '@/lib/server/route-shortener';
+import {
+  normaliseSkips,
+  shortenRoute,
+  validateSids,
+} from '@/lib/server/route-shortener';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,8 +29,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const skips = normaliseSkips((body as { skips?: unknown }).skips, sids.length);
+
   try {
-    const id = await shortenRoute(sids);
+    const id = await shortenRoute(sids, skips);
     return NextResponse.json({ id });
   } catch (err) {
     console.error('[/api/routes] failed to store route:', err);

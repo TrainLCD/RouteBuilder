@@ -15,19 +15,17 @@ export async function GET(
     return NextResponse.json({ error: 'invalid id' }, { status: 400 });
   }
   try {
-    const sids = await resolveRoute(id);
-    if (sids == null) {
+    const record = await resolveRoute(id);
+    if (record == null) {
       return NextResponse.json({ error: 'not found' }, { status: 404 });
     }
-    return NextResponse.json(
-      { sids },
-      {
-        headers: {
-          // Short URLs are content-addressed and immutable — cache aggressively.
-          'Cache-Control': 'public, s-maxage=31536000, stale-while-revalidate=86400',
-        },
+    // Body shape matches `RouteRecord`: { sids: number[], skips?: number[] }.
+    return NextResponse.json(record, {
+      headers: {
+        // Short URLs are content-addressed and immutable — cache aggressively.
+        'Cache-Control': 'public, s-maxage=31536000, stale-while-revalidate=86400',
       },
-    );
+    });
   } catch (err) {
     console.error(`[/api/routes/${id}] failed:`, err);
     return NextResponse.json({ error: 'lookup failed' }, { status: 502 });
