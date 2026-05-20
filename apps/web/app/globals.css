@@ -511,7 +511,7 @@ body {
   position: relative;
   margin-left: 0;
   padding: 8px 0 8px 18px;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-size: 12px; color: var(--ink-2);
 }
 .segment::before {
@@ -520,6 +520,9 @@ body {
   background: var(--seg-color, var(--border-2));
   box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.08);
 }
+/* The colored bar grows/shrinks naturally with the segment's height because
+   it's anchored top:0 bottom:0 — animating the switch panel's own height is
+   what drives the visual transition. */
 .segment.bad::before {
   background: repeating-linear-gradient(
     to bottom,
@@ -534,6 +537,109 @@ body {
 .segment.bad .seg-line-name { color: var(--danger); }
 .segment .seg-stops {
   color: var(--ink-3); font-family: 'JetBrains Mono', monospace; font-size: 11px;
+}
+/* Mid-group hops collapse to just the colored connector — the line label is
+   only rendered once per group (on the first hop). */
+.segment.compact { padding: 2px 0 2px 18px; min-height: 8px; }
+.segment.compact::before { top: -2px; bottom: -2px; }
+
+/* Line pill that opens the "switch this section to another line" panel. */
+.seg-line-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: transparent; border: 1px solid transparent; color: inherit;
+  font: inherit; padding: 2px 8px; border-radius: 999px;
+  cursor: pointer; transition: all .12s;
+}
+.seg-line-pill:hover {
+  background: var(--surface-2); border-color: var(--border);
+}
+.segment.open .seg-line-pill {
+  background: var(--surface-2); border-color: var(--ink-3);
+}
+.seg-switch-panel {
+  flex-basis: 100%;
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 6px 0 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06);
+  max-height: 240px; overflow: hidden;
+  animation: seg-switch-open 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.seg-switch-panel.closing {
+  animation: seg-switch-close 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  pointer-events: none;
+}
+/* Animates the panel's box from a 0-height collapsed state to its open
+   height. Padding, margin, and border widths are tweened too so the
+   parent segment's height (and therefore the colored bar) extends by
+   exactly the amount the panel grows by. */
+@keyframes seg-switch-open {
+  from {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0; margin-bottom: 0;
+    padding-top: 0; padding-bottom: 0;
+    border-top-width: 0; border-bottom-width: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 240px;
+    margin-top: 6px; margin-bottom: 4px;
+    padding-top: 8px; padding-bottom: 8px;
+    border-top-width: 1px; border-bottom-width: 1px;
+  }
+}
+@keyframes seg-switch-close {
+  from {
+    opacity: 1;
+    max-height: 240px;
+    margin-top: 6px; margin-bottom: 4px;
+    padding-top: 8px; padding-bottom: 8px;
+    border-top-width: 1px; border-bottom-width: 1px;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    margin-top: 0; margin-bottom: 0;
+    padding-top: 0; padding-bottom: 0;
+    border-top-width: 0; border-bottom-width: 0;
+  }
+}
+.seg-switch-opt {
+  opacity: 0;
+  animation: seg-switch-opt-fade 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.seg-switch-opt:nth-child(1) { animation-delay: 0.02s; }
+.seg-switch-opt:nth-child(2) { animation-delay: 0.05s; }
+.seg-switch-opt:nth-child(3) { animation-delay: 0.08s; }
+.seg-switch-opt:nth-child(4) { animation-delay: 0.11s; }
+.seg-switch-opt:nth-child(5) { animation-delay: 0.13s; }
+.seg-switch-opt:nth-child(n+6) { animation-delay: 0.15s; }
+@keyframes seg-switch-opt-fade {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg-switch-panel,
+  .seg-switch-panel.closing,
+  .seg-switch-opt { animation: none; opacity: 1; transform: none; }
+}
+.seg-switch-opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: transparent; border: 1px solid transparent;
+  font: inherit; color: inherit;
+  padding: 6px 8px; border-radius: 8px;
+  cursor: pointer; text-align: left;
+}
+.seg-switch-opt:hover { background: var(--surface-2); border-color: var(--border); }
+.seg-switch-stops {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-3);
+}
+.seg-switch-empty {
+  font-size: 12px; color: var(--ink-3); padding: 4px 6px;
 }
 
 /* Insert button between stops */

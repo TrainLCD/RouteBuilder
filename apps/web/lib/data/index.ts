@@ -9,6 +9,8 @@ export {
   ensureAdjacency,
   linesAt,
   lineOf,
+  linesBetweenGroups,
+  pathOnLine,
 } from './routing';
 export type { Segment, ValidationResult } from './routing';
 export {

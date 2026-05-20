@@ -180,6 +180,12 @@ export async function connectingLine(a: StationId, b: StationId): Promise<ApiLin
  *
  * Frontier-batched: each BFS depth issues at most two upstream calls (load
  * stations + load any uncached line orderings). Bounded by `maxNodes`.
+ *
+ * Opens with a fast path that honors the user's row choice: if either
+ * endpoint's `.line` directly covers both physical stations, walk that line
+ * verbatim instead of letting BFS find a marginally-shorter detour on a
+ * parallel operator (e.g. 新宿→東京 jumping off 中央線 to 湘南新宿+宇都宮
+ * via 上野 just because some sibling-row hop count came out the same).
  */
 export async function shortestPath(
   start: StationId,
@@ -187,6 +193,35 @@ export async function shortestPath(
   maxNodes = 600,
 ): Promise<StationId[] | null> {
   if (start === goal) return [start];
+
+  if (!getCachedStation(start) || !getCachedStation(goal)) {
+    await getStations([start, goal]);
+  }
+  const sStart = getCachedStation(start);
+  const sGoal = getCachedStation(goal);
+  if (sStart && sGoal) {
+    const linesToTry: LineId[] = [];
+    if (sStart.line?.id != null) linesToTry.push(sStart.line.id);
+    if (sGoal.line?.id != null && sGoal.line.id !== sStart.line?.id) {
+      linesToTry.push(sGoal.line.id);
+    }
+    const missingFast = linesToTry.filter((id) => !getCachedLineOrder(id));
+    if (missingFast.length > 0) await getLineListStationIds(missingFast);
+
+    const directCandidates: StationId[][] = [];
+    for (const lineId of linesToTry) {
+      // Preserve the user's row ids at the endpoints; intermediate stops
+      // use the chosen line's own rows. The first/last hop stays valid
+      // because the physical station serves the chosen line (otherwise
+      // its groupId wouldn't be on the line's groupOrder in the first place).
+      const path = pathOnLine(lineId, sStart.groupId, sGoal.groupId, start, goal);
+      if (path) directCandidates.push(path);
+    }
+    if (directCandidates.length > 0) {
+      directCandidates.sort((a, b) => a.length - b.length);
+      return directCandidates[0];
+    }
+  }
 
   const prev = new Map<StationId, StationId | null>();
   prev.set(start, null);
@@ -228,15 +263,12 @@ export async function shortestPath(
         const idOrder = getCachedLineOrder(lineId);
         const groupOrder = getCachedLineGroupOrder(lineId);
         if (!idOrder || !groupOrder) continue;
-        // Locate this physical station on this line (groupId-based) so we
-        // can also enter the sibling row for line `lineId`.
         const gIdx = groupOrder.indexOf(s.groupId);
         if (gIdx < 0) continue;
         const transferTarget = idOrder[gIdx];
         if (transferTarget !== cur) {
           if (enqueue(transferTarget, cur)) { reachedGoal = true; break; }
         }
-        // Walk neighbors on this line via the line's own row-ids.
         const neighbors: StationId[] = [];
         if (gIdx > 0) neighbors.push(idOrder[gIdx - 1]);
         if (gIdx < idOrder.length - 1) neighbors.push(idOrder[gIdx + 1]);
@@ -285,6 +317,68 @@ export function validateRouteSync(stationIds: StationId[]): ValidationResult {
 export async function validateRoute(stationIds: StationId[]): Promise<ValidationResult> {
   await ensureAdjacency(stationIds);
   return validateRouteSync(stationIds);
+}
+
+/**
+ * Walk `lineId` between two physical stations and return the row-id sequence.
+ * Endpoints fall back to the line's own rows; pass `startId`/`endId` to keep
+ * the caller's chosen rows (e.g. so a stop that's tracked as the 山手 row
+ * doesn't get rewritten to the 中央 row when switching the section to 中央).
+ * Requires the line's row + group orderings to be cached already.
+ */
+export function pathOnLine(
+  lineId: LineId,
+  startGroupId: StationGroupId,
+  endGroupId: StationGroupId,
+  startId?: StationId,
+  endId?: StationId,
+): StationId[] | null {
+  const groupOrder = getCachedLineGroupOrder(lineId);
+  const idOrder = getCachedLineOrder(lineId);
+  if (!groupOrder || !idOrder) return null;
+  const a = groupOrder.indexOf(startGroupId);
+  const b = groupOrder.indexOf(endGroupId);
+  if (a < 0 || b < 0) return null;
+  const step = a < b ? 1 : -1;
+  const path: StationId[] = [];
+  for (let i = a; i !== b + step; i += step) path.push(idOrder[i]);
+  if (path.length < 2) return null;
+  if (startId != null) path[0] = startId;
+  if (endId != null) path[path.length - 1] = endId;
+  return path;
+}
+
+/**
+ * Lines whose `groupOrder` contains both `aGroup` and `bGroup`. Used to surface
+ * "you could ride this section on these other lines instead" when the user
+ * taps a segment's line pill to switch the line.
+ *
+ * Returns lines paired with their stop count (1 = directly adjacent). Sorted
+ * by stop count ascending so the most direct alternative is first.
+ */
+export function linesBetweenGroups(
+  aGroup: StationGroupId,
+  bGroup: StationGroupId,
+): Array<{ line: ApiLine; stops: number }> {
+  if (aGroup === bGroup) return [];
+  const sa = getCachedStationByGroupId(aGroup);
+  const sb = getCachedStationByGroupId(bGroup);
+  if (!sa || !sb) return [];
+  const aLineMap = new Map<LineId, ApiLine>();
+  for (const l of sa.lines || []) aLineMap.set(l.id, l);
+  const out: Array<{ line: ApiLine; stops: number }> = [];
+  for (const l of sb.lines || []) {
+    const aLine = aLineMap.get(l.id);
+    if (!aLine) continue;
+    const groupOrder = getCachedLineGroupOrder(l.id);
+    if (!groupOrder) continue;
+    const aIdx = groupOrder.indexOf(aGroup);
+    const bIdx = groupOrder.indexOf(bGroup);
+    if (aIdx < 0 || bIdx < 0) continue;
+    out.push({ line: aLine, stops: Math.abs(aIdx - bIdx) });
+  }
+  out.sort((x, y) => x.stops - y.stops);
+  return out;
 }
 
 /** All lines at this physical station (`Station.lines`). */

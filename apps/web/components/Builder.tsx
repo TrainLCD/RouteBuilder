@@ -1,14 +1,15 @@
 import { Fragment, useState } from 'react';
 import { getCachedLine, getCachedStation } from '../lib/api/cache';
-import type { StationGroupId } from '../lib/api/types';
+import type { LineId, StationGroupId } from '../lib/api/types';
 import {
-  connectingLineSync, ensureAdjacency, linesAt, shortestPath, validateRouteSync,
+  connectingLineSync, ensureAdjacency, linesAt, linesBetweenGroups, pathOnLine,
+  shortestPath, validateRouteSync,
   type Route, type StationId,
 } from '../lib/data';
 import { useDataStore } from '../lib/hooks/useDataStore';
 import { useRouteData } from '../lib/hooks/useRouteData';
 import { stationLabel, type Lang } from '../lib/i18n';
-import { summarizeRoute } from '../lib/route-utils';
+import { summarizeRoute, type LineGroup } from '../lib/route-utils';
 import { Icon } from './ui/Icon';
 import { LinePill } from './ui/LinePill';
 
@@ -40,6 +41,53 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
   const [drag, setDrag] = useState<{ from: number } | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [dragInvalid, setDragInvalid] = useState(false);
+  // Identifies the line group whose pill is showing alternatives — keyed by
+  // the group's first stop index so it stays stable across re-renders even
+  // when the route is rebuilt around it. The `closing` phase keeps the panel
+  // in the DOM long enough to play the slide-out animation before unmount.
+  const [switchState, setSwitchState] = useState<{ idx: number; closing: boolean } | null>(null);
+  const togglePanel = (idx: number) => {
+    setSwitchState((cur) => {
+      if (cur?.idx === idx && !cur.closing) {
+        window.setTimeout(() => {
+          setSwitchState((s) => (s?.idx === idx && s.closing ? null : s));
+        }, 180);
+        return { idx, closing: true };
+      }
+      return { idx, closing: false };
+    });
+  };
+
+  const groups = sum.groups ?? [];
+  const groupForSeg = (segIdx: number): LineGroup | undefined =>
+    groups.find((g) => g.startStopIdx <= segIdx && segIdx < g.endStopIdx);
+
+  const switchLine = async (group: LineGroup, newLineId: LineId) => {
+    const startId = stops[group.startStopIdx];
+    const endId = stops[group.endStopIdx];
+    const startStation = getCachedStation(startId);
+    const endStation = getCachedStation(endId);
+    if (!startStation || !endStation) return;
+    const newPath = pathOnLine(
+      newLineId,
+      startStation.groupId,
+      endStation.groupId,
+      startId,
+      endId,
+    );
+    if (!newPath) return;
+    // Warm caches for the freshly-introduced row ids before we hand the route
+    // back to the renderer — otherwise their station names flash through a
+    // missing/loading state.
+    await ensureAdjacency(newPath);
+    const next = [
+      ...stops.slice(0, group.startStopIdx),
+      ...newPath,
+      ...stops.slice(group.endStopIdx + 1),
+    ];
+    setSwitchState(null);
+    onChange({ ...route, stations: next });
+  };
 
   const togglePassing = (sid: StationId) => {
     const next = new Set(passingSet);
@@ -231,17 +279,95 @@ export function Builder({ route, onChange, lang, density, onOpenSearch, onToast 
                     </div>
                   </div>
                 </div>
-                {segLine && (
-                  <div
-                    className="segment"
-                    style={{ ['--seg-color' as string]: segLine.color } as React.CSSProperties}
-                  >
-                    <span className="seg-line-name">
-                      {lang === 'en' && segLine.nameRoman ? segLine.nameRoman : segLine.nameShort}
-                    </span>
-                    <span className="seg-stops">→ 1 {lang === 'en' ? 'stop' : '駅'}</span>
-                  </div>
-                )}
+                {seg && (() => {
+                  const group = groupForSeg(i);
+                  if (!group) return null;
+                  // Only the segment that opens a line group renders the
+                  // line label and tap target; the rest collapse to the
+                  // colored connector so a long ride doesn't repeat the
+                  // pill on every hop.
+                  const isFirstOfGroup = i === group.startStopIdx;
+                  if (!isFirstOfGroup) {
+                    return (
+                      <div
+                        className={`segment compact${segLine ? '' : ' bad'}`}
+                        style={{
+                          ['--seg-color' as string]: segLine?.color ?? 'var(--border-2)',
+                        } as React.CSSProperties}
+                      />
+                    );
+                  }
+                  const isActive = switchState?.idx === group.startStopIdx;
+                  const isOpen = isActive && !switchState?.closing;
+                  const isClosing = isActive && switchState?.closing === true;
+                  const isVisible = isActive;
+                  const groupStart = stops[group.startStopIdx];
+                  const groupEnd = stops[group.endStopIdx];
+                  const groupStartStation = getCachedStation(groupStart);
+                  const groupEndStation = getCachedStation(groupEnd);
+                  const alts = (groupStartStation && groupEndStation)
+                    ? linesBetweenGroups(groupStartStation.groupId, groupEndStation.groupId)
+                        .filter((a) => a.line.id !== group.lineId)
+                    : [];
+                  const segColor = segLine?.color ?? 'var(--border-2)';
+                  return (
+                    <div
+                      className={`segment${isOpen ? ' open' : ''}${isClosing ? ' closing' : ''}${segLine ? '' : ' bad'}`}
+                      style={{ ['--seg-color' as string]: segColor } as React.CSSProperties}
+                    >
+                      <button
+                        className="seg-line-pill"
+                        type="button"
+                        onClick={() => togglePanel(group.startStopIdx)}
+                        aria-expanded={isOpen}
+                        aria-haspopup="listbox"
+                        title={
+                          lang === 'en'
+                            ? (segLine ? 'Switch this section to another line' : 'Pick a line to connect these stops')
+                            : (segLine ? '別の路線に切り替え' : 'つなぐ路線を選ぶ')
+                        }
+                      >
+                        <span className="seg-line-name">
+                          {segLine
+                            ? (lang === 'en' && segLine.nameRoman ? segLine.nameRoman : segLine.nameShort)
+                            : (lang === 'en' ? 'No connection' : 'つながりません')}
+                        </span>
+                      </button>
+                      {segLine && (
+                        <span className="seg-stops">
+                          → {group.hops} {lang === 'en' ? (group.hops === 1 ? 'stop' : 'stops') : '駅'}
+                        </span>
+                      )}
+                      {isVisible && (
+                        <div className={`seg-switch-panel${isClosing ? ' closing' : ''}`} role="listbox">
+                          {alts.length === 0 ? (
+                            <div className="seg-switch-empty">
+                              {lang === 'en'
+                                ? 'No other line covers both ends.'
+                                : '他に両端を通る路線はありません'}
+                            </div>
+                          ) : (
+                            alts.map((alt) => (
+                              <button
+                                key={alt.line.id}
+                                type="button"
+                                className="seg-switch-opt"
+                                role="option"
+                                aria-selected={false}
+                                onClick={() => void switchLine(group, alt.line.id)}
+                              >
+                                <LinePill lineId={alt.line.id} lang={lang} />
+                                <span className="seg-switch-stops">
+                                  {alt.stops} {lang === 'en' ? (alt.stops === 1 ? 'stop' : 'stops') : '駅'}
+                                </span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {i < stops.length - 1 && (
                   <div style={{ display: 'flex', margin: '4px 0' }}>
                     <button

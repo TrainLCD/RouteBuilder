@@ -1,6 +1,22 @@
 import { getCachedLineOrder, getCachedStation } from './api/cache';
 import { validateRouteSync, type LineId, type Segment, type StationId } from './data';
 
+/**
+ * Consecutive run of segments on the same line. The Builder collapses runs
+ * into a single "ride X line for N stops" block whose pill switches the
+ * whole run to another line at once — without grouping, switching a 4-stop
+ * 中央線 section would take four taps.
+ */
+export type LineGroup = {
+  lineId: LineId | null;
+  /** Index of the first stop covered by this group, in `stationIds`. */
+  startStopIdx: number;
+  /** Index of the last stop covered by this group, in `stationIds`. */
+  endStopIdx: number;
+  /** Number of segments (= endStopIdx - startStopIdx). */
+  hops: number;
+};
+
 export type RouteSummary = {
   stations: number;
   segments: number;
@@ -8,7 +24,34 @@ export type RouteSummary = {
   transfers: number;
   ok: boolean;
   segs?: Segment[];
+  groups?: LineGroup[];
 };
+
+function groupSegments(segments: Segment[]): LineGroup[] {
+  const groups: LineGroup[] = [];
+  if (segments.length === 0) return groups;
+  let curLineId: LineId | null = segments[0].line;
+  let groupStart = 0;
+  for (let i = 1; i < segments.length; i++) {
+    if (segments[i].line !== curLineId) {
+      groups.push({
+        lineId: curLineId,
+        startStopIdx: groupStart,
+        endStopIdx: i,
+        hops: i - groupStart,
+      });
+      curLineId = segments[i].line;
+      groupStart = i;
+    }
+  }
+  groups.push({
+    lineId: curLineId,
+    startStopIdx: groupStart,
+    endStopIdx: segments.length,
+    hops: segments.length - groupStart,
+  });
+  return groups;
+}
 
 export function summarizeRoute(stationIds: StationId[]): RouteSummary {
   if (stationIds.length < 2) {
@@ -33,6 +76,7 @@ export function summarizeRoute(stationIds: StationId[]): RouteSummary {
     transfers,
     ok: v.ok,
     segs: v.segments,
+    groups: groupSegments(v.segments),
   };
 }
 
